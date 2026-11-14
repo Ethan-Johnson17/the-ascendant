@@ -48,7 +48,7 @@ code-splitting as part of routing.
 | Error screen if a page crashes | Implemented |
 | Sample adventurer fixture (`src/fixtures/`, labelled "Sample data" in the UI, memory-only) | Mocked — by design |
 | **Storage is this browser only** | Partial — Supabase accounts replace it in Phase 2 |
-| Character artwork | Placeholder — heraldic crests; real art needs a source decision |
+| Character artwork | Placeholder — heraldic crests. Source decided 2026-11-14: free-licence first, AI stills as backup |
 | Edit character after creation | Not started |
 
 Screens CLAUDE.md lists for Phase 1 but `MASTER_PROMPT.md` places later (campaign dashboard, skill tree,
@@ -80,7 +80,7 @@ Six roles, provider abstraction, schema validation, retries, context management,
    + visual identity, 2 = character systems, 5 = campaigns/quests, 6 = history, 7 = cinematics,
    8 = testing + release. **Resolution: following the master prompt** (confirmed by the product owner
    2026-11-13); CLAUDE.md's deployment-readiness items (PWA, backups, Capacitor assessment) are folded
-   into Phase 8. CLAUDE.md Part 18 still shows the old order — recommend updating it to match.
+   into Phase 8. CLAUDE.md Part 18 was updated to match on 2026-11-14.
    Consequence for Phase 1: CLAUDE.md's Phase 1 asks for campaign dashboard, skill tree, learning and
    boss screens; the master prompt's Phase 1 asks for shell, navigation, dashboard, character creation,
    character sheet, campaign selection and settings. We build the master prompt's list; the other
@@ -95,7 +95,9 @@ Six roles, provider abstraction, schema validation, retries, context management,
 6. **Character mechanics** — **decided 2026-11-13** (recorded in `GAME_DESIGN.md` §3): attributes all
    start at 1 and grow only from demonstrated knowledge; race/class/background affect encounter tactics
    and story only. Race attribute bonuses from the first proposal were dropped because they conflict
-   with the start-at-1 rule. **Still open:** the attribute growth formula (Phase 2–3) and beta AI
+   with the start-at-1 rule (confirmed 2026-11-14; may be revisited later). Artwork: free-licence
+   first, AI stills as backup (`GAME_DESIGN.md` §14). CLAUDE.md Part 18 updated to the master
+   prompt's phase order (2026-11-14). **Still open:** the attribute growth formula (Phase 2–3) and beta AI
    provider (Phase 4).
 
 ## Technical risks

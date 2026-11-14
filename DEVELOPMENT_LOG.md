@@ -1,5 +1,12 @@
 # Development Log
 
+## 2026-11-14 — Decisions confirmed
+
+- Race attribute bonuses stay dropped (may be revisited later).
+- Artwork: free-licence art first, AI-generated stills as backup; every asset's licence recorded
+  (`GAME_DESIGN.md` §14).
+- CLAUDE.md Part 18 rewritten to the `MASTER_PROMPT.md` phase order, with the approval recorded there.
+
 ## 2026-11-13 — Phase 1: application foundation and visual identity
 
 **Product owner decisions:** schema approved; attributes start at 1 and grow only from demonstrated

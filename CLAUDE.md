@@ -674,46 +674,51 @@ Design account deletion and user-data export capabilities for future compliance.
 
 # PART 18 — DEVELOPMENT ROADMAP
 
-Work in the following phases.
+Phase order follows `MASTER_PROMPT.md` (approved by the product owner 2026-11-14). The earlier
+CLAUDE.md order is superseded; its deployment-readiness items are kept in Phase 8.
 
-## Phase 0 — Project foundation
-- Inspect the development environment.
-- Establish the repository.
+## Phase 0 — Project inspection and technical foundation
+- Inspect the development environment and repository.
 - Select and verify dependencies.
-- Create the project structure.
+- Create the project structure and coding standards.
+- Configure TypeScript, environment variables and database connectivity.
 - Establish design tokens.
-- Configure database connectivity.
-- Document architecture.
+- Document architecture, costs and free-tier limits.
 
-## Phase 1 — Visual prototype
+## Phase 1 — Application foundation and visual identity
 Build:
-- Welcome screen.
+- Application shell.
+- Navigation.
+- Responsive layouts.
 - Main dashboard.
+- Character creation interface.
 - Character sheet.
-- Campaign dashboard.
-- Skill tree.
-- Learning interface.
-- Boss interface.
+- Campaign selection.
+- Settings.
+- Reusable UI components.
 
-Use clearly labeled mock data only during this phase.
+Use clearly labelled mock data only where unavoidable.
 
-The prototype must establish the final visual direction.
+The visual identity must establish the final visual direction.
 
-## Phase 2 — Core application
+## Phase 2 — Character and game systems
 Build:
 - Authentication.
-- Character creation.
-- Database schema.
+- Database schema, migrations and Row Level Security.
 - Persistent character records.
-- Campaign management.
-- Character progression.
+- Races, classes, backgrounds and the six attributes.
+- Character statistics, equipment, XP and leveling.
+- Competencies, skill progression and achievements.
+- Campaign management and character progression.
 
 ## Phase 3 — Learning engine
 Build:
+- Subject and discipline structures.
 - Curriculum generation.
-- Lessons.
-- Assessments.
-- Competency tracking.
+- Learning objectives, lessons, activities and assessments.
+- Competency mapping and evidence-based mastery.
+- Adaptive difficulty.
+- Knowledge retention tracking and spaced repetition.
 - XP transactions.
 - Knowledge Codex.
 - Weakness Bank.
@@ -721,51 +726,57 @@ Build:
 ## Phase 4 — AI integration
 Implement the AI orchestration layer.
 
-Add the Game Master, Tutor, Examiner, Researcher, and Progression Advisor.
+Add the Game Master, Tutor, Examiner, Strategist, Researcher, and Progression Advisor.
 
-Validate all structured outputs.
+Validate all structured outputs. Implement error handling, retry logic, context management, source
+retrieval and citation handling, usage limits and provider abstraction.
 
-## Phase 5 — Quest and combat systems
+## Phase 5 — Campaigns, quests, and encounters
 Implement:
-- Quest generation.
-- Quest completion.
-- Boss requirements.
-- Tactical encounters.
-- Combat calculations.
+- Campaign creation and campaign-specific progression.
+- Quest generation and completion.
+- NPC interactions.
+- Learning challenges and practical projects.
+- Boss requirements and encounters.
+- Tactical encounters and combat calculations.
 - Failure and recovery.
-- Cinematic resolution.
+- Encounter resolution.
 
-## Phase 6 — History campaign
-Build the first playable history curriculum.
+## Phase 6 — First playable campaign: History
+Build the first playable history curriculum, beginning with Ancient Mesopotamia.
 
 Verify the complete player journey from character creation to boss victory.
 
-## Phase 7 — Testing and beta preparation
+## Phase 7 — Presentation and cinematic experiences
+Implement:
+- Character animations.
+- Encounter transitions and boss introductions.
+- Victory and defeat sequences.
+- Illustrated battle scenes and cinematic result screens.
+- Reusable animation systems.
+
+## Phase 8 — Testing, release and deployment readiness
 Test:
-- Mobile layouts.
-- Desktop layouts.
+- Mobile and desktop layouts.
 - Database persistence.
-- Authentication.
-- Security policies.
-- XP calculations.
-- AI failures.
+- Authentication and security policies.
+- XP calculations and duplicate-award prevention.
+- AI failures and output validation.
 - Campaign switching.
-- Boss progression.
-- Recovery mechanics.
+- Boss progression and recovery mechanics.
 - Long-term retention records.
+- Educational source integrity.
 
-Document known limitations.
-
-## Phase 8 — Deployment readiness
 Prepare:
-- Production build.
-- Environment configuration.
+- Production build and environment configuration.
 - Hosting documentation.
 - Backup strategy.
 - Database migrations.
 - PWA support where appropriate.
 - Capacitor compatibility assessment.
 - Future App Store requirements.
+
+Document known limitations.
 
 Do not claim App Store readiness until platform-specific requirements have actually been addressed and tested.
 

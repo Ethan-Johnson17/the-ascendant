@@ -128,7 +128,8 @@ when boss encounters are built (Phase 5).
 | Explorer | Walking staff, star chart | Traveller and geography dialogue options |
 
 Note: the originally proposed race attribute bonuses (e.g. Elf +2 DEX) were dropped because they
-conflict with the all-start-at-1 rule above. Classes' signature attributes have no numeric effect.
+conflict with the all-start-at-1 rule above (confirmed by the product owner 2026-11-14; may be
+revisited in future). Classes' signature attributes have no numeric effect.
 
 ## Progression
 
@@ -485,6 +486,15 @@ Use a premium, modern RPG interface.
 Avoid cluttered traditional fantasy interfaces.
 
 The experience should feel like a premium modern game, not a generic educational dashboard.
+
+### Artwork sourcing (product owner decision, 2026-11-14)
+
+1. **Free-licence art first** — artwork whose licence allows use in a free and, later, a commercial
+   app (e.g. public domain / CC0, or CC BY with attribution).
+2. **AI-generated still images as the backup** where suitable free-licence art does not exist.
+3. Every asset's source, author and licence is recorded, and required attributions are shown in the
+   app. Art with unclear or non-commercial-only licences is not used.
+4. Until real art is in place, the heraldic crest placeholders remain.
 
 ### Primary screens
 
