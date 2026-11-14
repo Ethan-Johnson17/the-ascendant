@@ -4,24 +4,31 @@ Status legend: **Not started · In progress · Implemented · Tested · Blocked*
 "Implemented" means the code exists. "Tested" means automated and/or manual tests passed.
 An interface existing does not make a feature implemented.
 
-Phase order follows the Master Project Execution Prompt (the most recent instruction document).
+Phase order follows `MASTER_PROMPT.md` (product owner's instruction, 2026-11-13), where it differs from `CLAUDE.md`.
 
-## Phase 0 — Project inspection and technical foundation — *In progress (awaiting first install on a real machine)*
+## Phase 0 — Project inspection and technical foundation — *Tested (complete 2026-11-13)*
+
+Verified on the product owner's Windows 11 machine with Node 24.21 (see `TESTING.md`).
 
 | Item | Status |
 |---|---|
 | Repository inspection | Tested — no prior code existed |
 | Architecture documented (`ARCHITECTURE.md`) | Implemented |
-| Database architecture proposed (`DATABASE_SCHEMA.md`) | Implemented (design only) |
+| Database architecture proposed (`DATABASE_SCHEMA.md`) | Implemented (design only — awaiting approval) |
 | AI architecture designed (`AI_SYSTEM.md`) | Implemented (design only) |
 | Free tiers and costs (`COSTS.md`) | Implemented |
-| TypeScript, Vite, Tailwind v4, test runner configured | Implemented — **`npm install` not yet run** (build sandbox had no package access) |
+| TypeScript, Vite, Tailwind v4, test runner configured | Tested — `npm install`, `npm test`, `npm run typecheck`, `npm run build`, `npm run dev` all pass |
+| Node version enforced (`engines` ≥ 22.12, `.npmrc` engine-strict, `.nvmrc`) | Tested — Node 18 install is refused with a clear message |
+| Dependency security audit | Tested — 0 vulnerabilities (zod upgraded 3 → 4 to fix GHSA-mrhx-c7xc-m3w5) |
 | Environment variable handling | Tested (3 tests) |
-| Design tokens | Implemented |
-| Supabase connectivity | Implemented — untested until a Supabase project exists |
+| Design tokens | Tested — render correctly in the browser (desktop and 375 px mobile) |
+| Supabase connectivity | Implemented — untested until a Supabase project exists (Phase 2) |
 | Engine: progression config and level curve | Tested (12 tests) |
-| Git repository / GitHub | Blocked — needs your decision on where the code lives |
-| GAME_DESIGN.md and CLAUDE.md copied into the repo | Not started — copy from the Claude project once the repo exists |
+| Git repository / GitHub | Tested — github.com/Ethan-Johnson17/the-ascendant, `main` branch |
+| GAME_DESIGN.md, CLAUDE.md, MASTER_PROMPT.md in the repo | Implemented |
+
+**Known, accepted for now:** the production bundle is ~660 KB (warning only). Phase 1 adds per-page
+code-splitting as part of routing.
 
 ## Phase 1 — Application foundation and visual identity — *Not started*
 App shell, navigation, responsive layouts, dashboard, character creation UI, character sheet,
@@ -50,14 +57,21 @@ Six roles, provider abstraction, schema validation, retries, context management,
 1. **Two different phase lists.** CLAUDE.md: Phase 1 = visual prototype (mock data), 2 = core app,
    5 = quests+combat+cinematics, 6 = history, 7 = testing, 8 = deployment. Master prompt: 1 = foundation
    + visual identity, 2 = character systems, 5 = campaigns/quests, 6 = history, 7 = cinematics,
-   8 = testing + release. **Resolution: following the master prompt**; CLAUDE.md's deployment-readiness
-   items (PWA, backups, Capacitor assessment) are folded into Phase 8. Recommend updating CLAUDE.md to match.
+   8 = testing + release. **Resolution: following the master prompt** (confirmed by the product owner
+   2026-11-13); CLAUDE.md's deployment-readiness items (PWA, backups, Capacitor assessment) are folded
+   into Phase 8. CLAUDE.md Part 18 still shows the old order — recommend updating it to match.
+   Consequence for Phase 1: CLAUDE.md's Phase 1 asks for campaign dashboard, skill tree, learning and
+   boss screens; the master prompt's Phase 1 asks for shell, navigation, dashboard, character creation,
+   character sheet, campaign selection and settings. We build the master prompt's list; the other
+   screens arrive with the phases that give them real data (3 and 5).
 2. **Documentation file lists differ.** Master prompt asks for `CHANGELOG.md`; CLAUDE.md asks for
    `DEVELOPMENT_LOG.md`, `DATABASE_SCHEMA.md`, `AI_SYSTEM.md`, `TESTING.md`, `README.md`. Resolution: maintain all.
 3. **Screen lists differ slightly.** Design doc has "NPC interaction" and "Victory/defeat cinematic";
    CLAUDE.md has "Character sheet" and "Battle resolution". Resolution: build the union.
 4. **Schema refinements** proposed in `DATABASE_SCHEMA.md` (definitions vs. progress, ledgers) — awaiting approval.
-5. **Unspecified mechanics** that will need your call before Phase 2: attribute allocation method
+5. **Node version.** The Phase 0 README said "Node 22 or newer" but nothing enforced it; on Node 18
+   the tools fail with confusing errors. Now enforced (see Phase 0 table).
+6. **Unspecified mechanics** that will need your call before Phase 2: attribute allocation method
    (point-buy vs. standard array vs. rolling), what each race/class/background actually grants, and
    how attributes affect gameplay (e.g. boss checks) given they're shared across subjects.
 

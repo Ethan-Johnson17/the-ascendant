@@ -1,6 +1,6 @@
 # The Ascendant — Architecture
 
-Status: **Phase 0 draft.** This describes the target architecture and marks what exists today.
+Status: **Phase 0 complete (2026-11-13).** This describes the target architecture and marks what exists today.
 `GAME_DESIGN.md` is the product authority; this document explains how the code delivers it.
 
 ---
@@ -130,7 +130,7 @@ importable by server code. No product requirement changes.
 
 | Piece | Status |
 |---|---|
-| Toolchain config (Vite, TS, Tailwind v4, scripts) | Implemented — not yet installed/run on a real machine (see README) |
+| Toolchain config (Vite, TS, Tailwind v4, scripts) | Tested on Windows / Node 24 (2026-11-13) |
 | Design tokens | Implemented |
 | Environment validation | Implemented, tested |
 | Supabase client + connection check | Implemented, untested against a live project |

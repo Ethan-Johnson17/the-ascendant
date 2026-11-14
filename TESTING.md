@@ -25,5 +25,19 @@ Run all automated tests: `npm test`
 | AI outputs cannot bypass engine rules | Not started (Phase 4) |
 
 ## Current results
-2026-11-12 — 15 tests, 15 passing (Node 22 test runner). Engine and config typecheck clean under strict TS.
-UI compiles (bundled with esbuild); not yet run in Vite or a browser.
+
+### 2026-11-13 — Phase 0 verification on a real machine
+Windows 11, Node 24.21.0, npm 11.19.0.
+
+| Check | Result |
+|---|---|
+| `npm install` | Pass — 104 packages, 0 vulnerabilities (after zod 3 → 4 upgrade) |
+| `npm test` | Pass — 15 tests, 15 passing, 0 failing |
+| `npm run typecheck` | Pass — 0 errors with the real React 19.3 / Vite 7.3 / TypeScript 6.0 types |
+| `npm run build` | Pass — `dist/` produced; bundle-size warning (~660 KB JS), see ROADMAP |
+| `npm run dev` → http://localhost:5173 | Pass — status screen renders, fonts and tokens load, no console errors, layout holds at 375 px |
+| Engine self-check on screen | Pass — 1,500 XP → level 6, 187/445 (matches `round(100 × (L−1)^1.6)`) |
+| Install on Node 18.17 | Refused with `EBADENGINE … Required: {"node":">=22.12"}` (intended) |
+
+### 2026-11-12 — Phase 0 (build sandbox, no package access)
+15 tests, 15 passing (Node 22 test runner). UI compile-checked with esbuild only; not run in Vite.

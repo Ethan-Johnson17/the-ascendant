@@ -2,23 +2,26 @@
 
 An educational RPG in which **your real-world knowledge is the source of your character's power.**
 
-Current stage: **Phase 0 — foundation.** See `ROADMAP.md` for status.
+Current stage: **Phase 0 complete; Phase 1 next.** See `ROADMAP.md` for status.
 
 ## Running it on your computer (first time)
 
-You need **Node.js 22 or newer**. Check by opening Terminal (Mac) or PowerShell (Windows) and typing
-`node -v`. If it's missing or older, install the "LTS" version from https://nodejs.org.
+You need **Node.js 22.12 or newer** (24 recommended). Check by opening Terminal (Mac) or PowerShell
+(Windows) and typing `node -v`.
 
-1. Unzip the project somewhere you'll keep it, e.g. your Documents folder.
-2. Open Terminal and move into the folder, for example:
-   `cd ~/Documents/the-ascendant`
-3. Install the project's libraries (takes a minute, only needed once and after updates):
-   `npm install`
-4. Run the tests — you should see `pass 15` and `fail 0`:
-   `npm test`
-5. Start the app:
-   `npm run dev`
-   then open http://localhost:5173 in your browser. Stop it with `Ctrl + C`.
+- **If you use nvm on Windows** (you have several Node versions installed): run `nvm use 24.21.0`
+  before working on this project. This switches your default Node for every project, so switch back
+  afterwards if another project needs an older version.
+- **Otherwise**, install the "LTS" version from https://nodejs.org.
+
+If your Node is too old, `npm install` stops with *"Unsupported engine … Required: node >=22.12"*.
+That's deliberate: it prevents confusing errors later.
+
+1. Get the code: `git clone https://github.com/Ethan-Johnson17/the-ascendant.git`, then move into the
+   folder with `cd the-ascendant`.
+2. Install the project's libraries (only needed once and after updates): `npm install`
+3. Run the tests — you should see `pass 15` and `fail 0`: `npm test`
+4. Start the app: `npm run dev`, then open http://localhost:5173 in your browser. Stop it with `Ctrl + C`.
 
 Without a database configured, the status screen will show **Configuration: needs attention** —
 that's expected until Supabase is set up (Phase 2 will walk you through it).

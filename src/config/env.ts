@@ -18,8 +18,16 @@ const envSchema = z.object({
   VITE_SUPABASE_URL: z
     .string()
     .trim()
-    .url('VITE_SUPABASE_URL must be a full URL, e.g. https://abcd.supabase.co'),
-  VITE_SUPABASE_ANON_KEY: z.string().trim().min(20, 'VITE_SUPABASE_ANON_KEY looks missing or truncated'),
+    .pipe(
+      z.url({
+        protocol: /^https?$/,
+        error: 'VITE_SUPABASE_URL must be a full URL, e.g. https://abcd.supabase.co',
+      }),
+    ),
+  VITE_SUPABASE_ANON_KEY: z
+    .string()
+    .trim()
+    .min(20, { error: 'VITE_SUPABASE_ANON_KEY looks missing or truncated' }),
   VITE_AI_MODE: z.enum(aiModes).default('fixtures'),
 });
 
