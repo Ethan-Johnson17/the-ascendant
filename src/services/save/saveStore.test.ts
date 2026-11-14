@@ -2,7 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSaveStore, SAVE_KEY, type KeyValueStorage } from './saveStore.ts';
 import { emptySave, type SaveFile } from './saveFile.ts';
-import { sampleSave } from '../../fixtures/sampleAdventurer.ts';
+import { samplePlayer } from '../../fixtures/sampleAdventurer.ts';
+
+// A save in the pre-accounts browser format (still read when importing an old character).
+const sampleSave: SaveFile = { version: 1, character: samplePlayer.character, campaigns: samplePlayer.campaigns, settings: { motion: 'system' } };
 
 function memoryStorage(initial: Record<string, string> = {}): KeyValueStorage & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));

@@ -1,4 +1,5 @@
-import type { SaveFile } from '../services/save/saveFile.ts';
+import type { PlayerData } from '../services/game/playerData.ts';
+import { findBackground } from '../content/character/options.ts';
 
 /**
  * ⚠ DEVELOPMENT FIXTURE — NOT REAL PLAYER DATA.
@@ -7,11 +8,12 @@ import type { SaveFile } from '../services/save/saveFile.ts';
  * with non-zero progress before the learning engine exists (Phase 3). The attribute scores and XP
  * below were typed by hand; in the real game they can only come from demonstrated knowledge.
  *
- * Loaded only from Settings → "Preview sample adventurer". While active, the app shows a
- * "Sample data" banner, keeps all changes in memory, and never writes them to the real save.
+ * Loaded only from "Preview with a sample adventurer". While active, the app shows a "Sample data"
+ * banner, keeps all changes in memory, and never sends anything to the database.
  */
-export const sampleSave: SaveFile = {
-  version: 1,
+const createdAt = '2026-11-01T09:00:00.000Z';
+
+export const samplePlayer: PlayerData = {
   character: {
     id: 'fixture-character',
     name: 'Ninsun of Uruk',
@@ -26,7 +28,7 @@ export const sampleSave: SaveFile = {
     },
     attributes: { str: 2, dex: 1, con: 3, int: 6, wis: 4, cha: 2 },
     totalXp: 1500,
-    createdAt: '2026-11-01T09:00:00.000Z',
+    createdAt,
   },
   campaigns: [
     {
@@ -39,5 +41,17 @@ export const sampleSave: SaveFile = {
       lastPlayedAt: '2026-11-12T18:30:00.000Z',
     },
   ],
-  settings: { motion: 'system' },
+  items: (findBackground('scholar')?.startingGear ?? []).map((name, i) => ({
+    id: `fixture-item-${i}`,
+    itemId: `fixture-item-${i}`,
+    name,
+    description: '',
+    source: 'starting_gear' as const,
+    equipped: false,
+    acquiredAt: createdAt,
+  })),
+  achievements: [
+    { achievementId: 'character-created', earnedAt: createdAt },
+    { achievementId: 'first-campaign', earnedAt: '2026-11-01T09:05:00.000Z' },
+  ],
 };

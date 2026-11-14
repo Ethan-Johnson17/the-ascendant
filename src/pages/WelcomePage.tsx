@@ -57,8 +57,11 @@ export default function WelcomePage() {
         transition={{ delay: 0.9, duration: duration.slow }}
         className="mt-10 flex flex-col items-center gap-3"
       >
-        <ButtonLink to="/create" size="lg" className="w-full sm:w-auto sm:min-w-64">
-          Create your character
+        <ButtonLink to="/sign-up" size="lg" className="w-full sm:w-auto sm:min-w-64">
+          Create an account
+        </ButtonLink>
+        <ButtonLink to="/sign-in" variant="secondary" size="lg" className="w-full sm:w-auto sm:min-w-64">
+          Sign in
         </ButtonLink>
         <Button
           variant="ghost"
@@ -70,9 +73,6 @@ export default function WelcomePage() {
         >
           Preview with a sample adventurer
         </Button>
-        <ButtonLink to="/settings" variant="ghost" className="text-smoke">
-          Settings
-        </ButtonLink>
       </motion.div>
     </div>
   );

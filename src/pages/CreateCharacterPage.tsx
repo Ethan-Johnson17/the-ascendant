@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
-import { Button, ButtonLink } from '../components/ui/Button.tsx';
+import { useAuth } from '../app/AuthProvider.tsx';
+import { LocalImportBanner } from '../features/character/LocalImportBanner.tsx';
+import { Button } from '../components/ui/Button.tsx';
 import { ProgressBar } from '../components/ui/ProgressBar.tsx';
 import { Notice } from '../components/ui/Notice.tsx';
 import { validateDraft, type CharacterDraft, type DraftField } from '../engine/character/createCharacter.ts';
@@ -34,6 +36,7 @@ const stepFields: Record<StepId, DraftField[]> = {
 
 export default function CreateCharacterPage() {
   const { createCharacter } = useGame();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<CharacterDraft>(emptyDraft);
   const [index, setIndex] = useState(0);
@@ -56,8 +59,12 @@ export default function CreateCharacterPage() {
     focusOnMount.current = true;
   };
 
-  const submit = () => {
-    const result = createCharacter(draft);
+  const [saving, setSaving] = useState(false);
+  const submit = async () => {
+    if (saving) return;
+    setSaving(true);
+    const result = await createCharacter(draft);
+    setSaving(false);
     if (result.ok) navigate('/', { replace: true });
     else setSubmitError(result.issues.map((i) => i.message).join(' '));
   };
@@ -65,21 +72,26 @@ export default function CreateCharacterPage() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex items-center justify-between gap-4">
-        <ButtonLink to="/welcome" variant="ghost" className="-ml-3" icon={<ChevronLeft className="size-4" aria-hidden />}>
-          Leave
-        </ButtonLink>
+        <Button variant="ghost" className="-ml-3" icon={<LogOut className="size-4" aria-hidden />} onClick={() => void signOut()}>
+          Sign out
+        </Button>
         <p className="text-xs uppercase tracking-[0.25em] text-gold-500">
           Step {index + 1} of {creationSteps.length}
         </p>
       </div>
       <ProgressBar value={index + 1} max={creationSteps.length} label="Character creation progress" className="mt-3" />
+      {index === 0 && (
+        <div className="mt-6">
+          <LocalImportBanner />
+        </div>
+      )}
 
       <form
         className="mt-8 flex flex-1 flex-col"
         onSubmit={(e) => {
           e.preventDefault();
           if (stepIssue) return;
-          if (isLast) submit();
+          if (isLast) void submit();
           else go(1);
         }}
       >
@@ -128,8 +140,8 @@ export default function CreateCharacterPage() {
           </Button>
           <div className="flex min-w-0 items-center gap-3">
             {stepIssue && !['name', 'appearance', 'story'].includes(step.id) && <p className="hidden text-sm text-smoke sm:block">{stepIssue.message}</p>}
-            <Button type="submit" size={isLast ? 'lg' : 'md'} disabled={Boolean(stepIssue)}>
-              {isLast ? 'Begin your ascent' : 'Continue'}
+            <Button type="submit" size={isLast ? 'lg' : 'md'} disabled={Boolean(stepIssue) || saving}>
+              {isLast ? (saving ? 'Saving your character…' : 'Begin your ascent') : 'Continue'}
               {!isLast && <ChevronRight className="size-4" aria-hidden />}
             </Button>
           </div>
