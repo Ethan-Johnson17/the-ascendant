@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Landmark, MapPinned, Pause, Play, Hourglass, Star, Swords } from 'lucide-react';
-import { useGame } from '../app/GameProvider.tsx';
+import { useGame, type ActionResult } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Panel } from '../components/ui/Panel.tsx';
 import { Badge } from '../components/ui/Badge.tsx';
@@ -12,12 +12,19 @@ import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { campaignTemplates, findTemplate } from '../content/campaigns/catalog.ts';
 
 export default function CampaignsPage() {
-  const { save, startCampaign, pauseCampaign, resumeCampaign, focusCampaign } = useGame();
+  const { player, startCampaign, pauseCampaign, resumeCampaign, focusCampaign } = useGame();
   const [message, setMessage] = useState<{ tone: 'info' | 'warning'; text: string } | null>(null);
-  const current = currentCampaign(save.campaigns);
+  const current = currentCampaign(player.campaigns);
 
-  const run = (result: { ok: true } | { ok: false; error: string }, success: string) =>
+  const [busy, setBusy] = useState(false);
+
+  const run = async (action: () => Promise<ActionResult>, success: string) => {
+    if (busy) return;
+    setBusy(true);
+    const result = await action();
+    setBusy(false);
     setMessage(result.ok ? { tone: 'info', text: success } : { tone: 'warning', text: result.error });
+  };
 
   return (
     <div>
@@ -29,18 +36,19 @@ export default function CampaignsPage() {
 
       <div aria-live="polite">{message && <Notice tone={message.tone} className="mb-6">{message.text}</Notice>}</div>
 
-      {save.campaigns.length > 0 && (
+      {player.campaigns.length > 0 && (
         <section aria-labelledby="yours" className="mb-10">
           <h2 id="yours" className="mb-4 font-display text-xl font-semibold tracking-wide text-gold-200">Your campaigns</h2>
           <ul className="grid gap-4 md:grid-cols-2">
-            {save.campaigns.map((c) => (
+            {player.campaigns.map((c) => (
               <li key={c.id}>
                 <YourCampaign
                   campaign={c}
                   isCurrent={current?.id === c.id}
-                  onPause={() => run(pauseCampaign(c.id), 'Campaign paused. Your progress is kept.')}
-                  onResume={() => run(resumeCampaign(c.id), 'Campaign resumed.')}
-                  onFocus={() => run(focusCampaign(c.id), 'This is now your current campaign.')}
+                  busy={busy}
+                  onPause={() => void run(() => pauseCampaign(c.id), 'Campaign paused. Your progress is kept.')}
+                  onResume={() => void run(() => resumeCampaign(c.id), 'Campaign resumed.')}
+                  onFocus={() => void run(() => focusCampaign(c.id), 'This is now your current campaign.')}
                 />
               </li>
             ))}
@@ -52,7 +60,7 @@ export default function CampaignsPage() {
         <h2 id="available" className="mb-4 font-display text-xl font-semibold tracking-wide text-gold-200">Available campaigns</h2>
         <ul className="space-y-4">
           {campaignTemplates.map((t) => {
-            const begun = save.campaigns.some((c) => c.templateId === t.id);
+            const begun = player.campaigns.some((c) => c.templateId === t.id);
             return (
               <li key={t.id}>
                 <Panel as="article" tone="raised">
@@ -99,7 +107,7 @@ export default function CampaignsPage() {
                     {begun ? (
                       <Badge tone="vital">Begun</Badge>
                     ) : (
-                      <Button size="lg" onClick={() => run(startCampaign(t.id), `You have begun ${t.title}. It is now your current campaign.`)}>
+                      <Button size="lg" disabled={busy} onClick={() => void run(() => startCampaign(t.id), `You have begun ${t.title}. It is now your current campaign.`)}>
                         Begin campaign
                       </Button>
                     )}
@@ -117,7 +125,7 @@ export default function CampaignsPage() {
   );
 }
 
-function YourCampaign({ campaign, isCurrent, onPause, onResume, onFocus }: { campaign: PlayerCampaign; isCurrent: boolean; onPause: () => void; onResume: () => void; onFocus: () => void }) {
+function YourCampaign({ campaign, isCurrent, busy, onPause, onResume, onFocus }: { campaign: PlayerCampaign; isCurrent: boolean; busy: boolean; onPause: () => void; onResume: () => void; onFocus: () => void }) {
   const template = findTemplate(campaign.templateId);
   const statusTone = campaign.status === 'active' ? 'vital' : campaign.status === 'paused' ? 'warning' : 'gold';
   return (
@@ -140,17 +148,17 @@ function YourCampaign({ campaign, isCurrent, onPause, onResume, onFocus }: { cam
         {campaign.status === 'active' && (
           <>
             {!isCurrent && (
-              <Button variant="secondary" icon={<Star className="size-4" aria-hidden />} onClick={onFocus}>
+              <Button variant="secondary" icon={<Star className="size-4" aria-hidden />} disabled={busy} onClick={onFocus}>
                 Make current
               </Button>
             )}
-            <Button variant="ghost" icon={<Pause className="size-4" aria-hidden />} onClick={onPause}>
+            <Button variant="ghost" icon={<Pause className="size-4" aria-hidden />} disabled={busy} onClick={onPause}>
               Pause
             </Button>
           </>
         )}
         {campaign.status === 'paused' && (
-          <Button variant="secondary" icon={<Play className="size-4" aria-hidden />} onClick={onResume}>
+          <Button variant="secondary" icon={<Play className="size-4" aria-hidden />} disabled={busy} onClick={onResume}>
             Resume
           </Button>
         )}

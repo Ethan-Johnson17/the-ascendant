@@ -1,6 +1,7 @@
 import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { FlaskConical, LayoutDashboard, Map, Settings, UserRound, type LucideIcon } from 'lucide-react';
+import { useAuth } from '../app/AuthProvider.tsx';
+import { Backpack, FlaskConical, LayoutDashboard, Map, Settings, UserRound, type LucideIcon } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
 import { Crest } from '../components/game/Crest.tsx';
 import { Button } from '../components/ui/Button.tsx';
@@ -18,18 +19,21 @@ interface NavItem {
   end?: boolean;
 }
 
-// Only screens that exist are listed. Later phases add Codex, Weakness Bank, Inventory, etc.
+// Only screens that exist are listed. Later phases add Codex, Weakness Bank, etc.
 const nav: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/character', label: 'Character', icon: UserRound },
   { to: '/campaigns', label: 'Campaigns', icon: Map },
+  { to: '/inventory', label: 'Inventory', icon: Backpack },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AppShell() {
-  const { save, isSample, exitSample, storageWarning } = useGame();
-  const character = save.character;
-  const { pathname } = useLocation();
+  const { player, isSample, exitSample, storageWarning } = useGame();
+  const { status } = useAuth();
+  const character = player.character;
+  const { pathname, state } = useLocation();
+  const notice = (state as { notice?: string } | null)?.notice ?? null;
   // Each new screen starts at the top, as a player expects when changing page.
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -77,7 +81,9 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
-        <p className="mt-auto px-6 pb-6 text-xs text-smoke">Phase 1 · progress saved on this device</p>
+        <p className="mt-auto truncate px-6 pb-6 text-xs text-smoke">
+          {status.state === 'signed-in' ? `Signed in as ${status.user.email ?? 'player'}` : 'Not signed in'}
+        </p>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -93,7 +99,7 @@ export function AppShell() {
               <p className="flex items-center gap-2 text-sm text-ink">
                 <FlaskConical className="size-4 text-arcane" aria-hidden />
                 <span>
-                  <strong className="font-semibold">Sample data.</strong> <span className="text-ash">A pretend adventurer for previewing the design. Nothing here is saved.</span>
+                  <strong className="font-semibold">Sample data.</strong> <span className="text-ash">A pretend adventurer for previewing the design. Nothing here is saved to your account.</span>
                 </span>
               </p>
               <Button variant="ghost" onClick={exitSample} className="min-h-9 text-arcane hover:text-ink">
@@ -109,6 +115,7 @@ export function AppShell() {
               {storageWarning}
             </Notice>
           )}
+          {notice && <Notice className="mb-6">{notice}</Notice>}
           <Suspense fallback={<PageFallback />}>
             <Outlet />
           </Suspense>
@@ -118,7 +125,7 @@ export function AppShell() {
       {/* Mobile bottom navigation */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-iron/70 bg-obsidian/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-iron/70 bg-obsidian/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         {nav.map((item) => (
           <NavLink

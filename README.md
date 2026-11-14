@@ -20,21 +20,34 @@ That's deliberate: it prevents confusing errors later.
 1. Get the code: `git clone https://github.com/Ethan-Johnson17/the-ascendant.git`, then move into the
    folder with `cd the-ascendant`.
 2. Install the project's libraries (only needed once and after updates): `npm install`
-3. Run the tests — you should see `pass 15` and `fail 0`: `npm test`
+3. Run the tests — you should see `fail 0`: `npm test`
 4. Start the app: `npm run dev`, then open http://localhost:5173 in your browser. Stop it with `Ctrl + C`.
 
-You'll see the welcome screen. Create a character, or choose **Preview with a sample adventurer**
-to see the app with progress on screen. For now your progress is saved in that browser only.
-**Settings → System status** shows *Configuration: needs attention* until Supabase is set up in Phase 2.
+You'll see the welcome screen. Create an account (or sign in), then create your character. Choose
+**Preview with a sample adventurer** to see the app with progress on screen without an account.
+The app needs a Supabase project to sign in — see below.
 
-## Connecting Supabase (when we reach that step)
+## Connecting Supabase
 
-1. Create a free account at https://supabase.com and a new project.
-2. In the project: **Project Settings → API**. Copy the Project URL and the `anon` public key.
-3. In the project folder, copy `.env.example` to a new file named `.env.local` and paste the two values.
-4. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
+1. Create a free account at https://supabase.com and a new project. Keep the database password private.
+2. **Project Settings → API Keys**: copy the **publishable** key (`sb_publishable_…`). The Project URL
+   is `https://<project-ref>.supabase.co` — nothing after `.co`.
+3. In the project folder, copy `.env.example` to `.env.local` and fill in `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_PUBLISHABLE_KEY`.
+4. **Authentication → URL Configuration**: Site URL `http://localhost:5173`; add the redirect URL
+   `http://localhost:5173/**`. (Without this, confirmation emails link to the wrong address.)
+5. Put the database in place (run in the project folder):
+   - `npx supabase login` — opens the browser to sign in.
+   - `npx supabase link --project-ref <project-ref>`
+   - `npx supabase db push --remote` — **`--remote` is required** with Supabase CLI 3, which otherwise
+     targets a local database. Add `--yes` if the Yes/No prompt doesn't respond to arrow keys.
+6. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
 
-Never paste the `service_role` key or any AI provider key into `.env.local`.
+Never paste the secret (`sb_secret_…`) or `service_role` key, or any AI provider key, into `.env.local`.
+The app refuses a secret key if one is pasted by mistake.
+
+Supabase's built-in email sender only sends a few emails an hour. Connect a custom SMTP provider before
+inviting beta testers (see `COSTS.md`).
 
 ## Commands
 

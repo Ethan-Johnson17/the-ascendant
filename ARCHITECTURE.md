@@ -114,14 +114,21 @@ importable by server code. No product requirement changes.
 - **Phase 1:** one `GameProvider` (React context) holds the player's save and exposes actions
   (`createCharacter`, `startCampaign`, `pauseCampaign` …). Each action calls the engine, then writes the
   result through `SaveStore` (browser localStorage, validated with zod on every load).
-- **Phase 2:** `SaveStore` is replaced by Supabase reads plus Edge Function calls for state changes;
-  screens keep using the same actions. No state-management library is needed yet.
+- **Phase 2 (now):** `AuthProvider` holds the Supabase sign-in session. `GameProvider` loads the
+  signed-in player's records through `GameRepository` (`src/services/game/`), validating every row
+  with zod (`playerData.ts`). Each action runs the engine rule first, writes through the repository
+  (only the columns the database lets players write), then reloads, so the screen always reflects
+  what is stored. Display settings stay per device in localStorage. The old browser save is read only
+  to offer a one-time import into the account.
+- **Phase 3:** engine-owned changes (XP, mastery) go through Edge Functions calling `apply_xp_award`.
+  No state-management library is needed yet.
 - **UI state** (open panels, form drafts) stays in React component state.
 - The client never holds a writable "source of truth" for XP or mastery.
 
 ## 6. Security boundaries
 
-- Browser has only the Supabase **anon key**. Every player table has RLS: `user_id = auth.uid()`.
+- Browser has only the Supabase **publishable key** (the config refuses a secret key). Every player
+  table has RLS: `user_id = auth.uid()`. Passwords go straight to Supabase Auth; the app never stores them.
 - Authoritative tables (XP ledger, mastery, boss outcomes) are **read-only** to the `authenticated`
   role; only Edge Functions (service role, server-side) write them, after running the engine.
   Players' writes are limited column by column (e.g. a character's name, never its attributes).
@@ -155,7 +162,8 @@ importable by server code. No product requirement changes.
 | Engine: progression config + level curve | Implemented, tested |
 | App shell, navigation, 6 screens, reusable components | Implemented, manually tested (Phase 1) |
 | Engine: character creation, campaign lifecycle | Implemented, tested |
-| Local save (validated) | Implemented, tested; replaced by Supabase in Phase 2 |
-| Database migrations, RLS, triggers, XP function | Implemented, tested offline; not yet on a live project |
+| Local save (validated) | Kept only to import pre-accounts characters |
+| Accounts (Supabase Auth), online saves, inventory, achievements | Implemented, tested live (Phase 2) |
+| Database migrations, RLS, triggers, XP function | Implemented, tested offline and applied live |
 | Engine: attribute growth, XP award planning | Implemented, tested |
 | Everything else | Not started |

@@ -1,5 +1,30 @@
 # Development Log
 
+## 2026-11-14 — Phase 2 Milestone B: accounts and the online app
+
+**Built:** Supabase project connected and migrations applied; sign-up, sign-in, forgot/reset password
+and sign-out screens; `AuthProvider`; `GameRepository` (Supabase) replacing browser storage; row
+validation (`playerData.ts`); inventory screen; achievements on the character sheet; download from the
+account; delete via `delete_my_progress`; one-time import of a pre-accounts browser character.
+
+**Choices:**
+- *Publishable key name.* Supabase renamed the "anon" key to "publishable"; the config accepts either
+  and refuses a key starting `sb_secret_`.
+- *Engine first, database second, then reload.* Gives instant, specific messages and guarantees the
+  screen shows stored truth (triggers add gear and achievements the client never computes).
+- *Display settings per device* (localStorage), since motion preference can differ by device.
+  `profiles.settings` is left unused for now.
+- *No passwords typed by the AI assistant.* The product owner created the account; testing then used
+  the real signed-in session.
+- *Bundle split:* Supabase, React and Framer Motion each get a cacheable file.
+
+**Problems hit:** Supabase CLI 3 targets a local database unless `--remote` is given; its arrow-key
+prompt didn't respond in the desktop app's terminal panel, so `--yes` was used. Supabase's
+"safe update" rule rejects updates without a filter, so the live security check was repeated with a
+filter to prove the column permissions themselves refuse the change.
+
+**Open:** custom SMTP before beta; account deletion; password-reset round trip test.
+
 ## 2026-11-14 — Phase 2 Milestone A: database, rules and tests
 
 **Product owner decisions:** schema approved for build; each attribute maps to one sub-skill of the

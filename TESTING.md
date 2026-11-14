@@ -36,6 +36,28 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-14 — Phase 2 Milestone B (live Supabase project)
+Automated: **87 tests, 87 passing**; typecheck clean; build clean (large libraries split into
+cacheable files, no size warning).
+
+Live walkthrough in the in-app browser against the real project:
+
+| Journey | Result |
+|---|---|
+| Signed-out visit to `/` → Welcome; sign-up, sign-in screens render; no console errors | Pass |
+| Sample adventurer without an account: dashboard, inventory, character sheet with achievements, settings | Pass |
+| Phone width: five-item bottom navigation fits (75×64 px targets), no sideways scroll | Pass |
+| Sign up → confirmation email → link signs in → sent to character creation (done by the product owner) | Pass |
+| Character created; survives a full reload (read back from the database), all attributes 1, XP 0 | Pass |
+| Background starting gear and "The Oath Is Sworn" granted automatically by the database | Pass |
+| Begin History campaign → "First Steps" earned; pause → resume; each saved | Pass |
+| Download my data: labelled JSON with character, campaign, gear, achievements, account email | Pass |
+| From the signed-in browser, directly try to: raise Intelligence, set XP, write the XP ledger, call the XP function, complete a campaign | All refused by the database; character unchanged |
+
+Not covered yet: password-reset email round trip; importing a pre-accounts browser save (needs a
+browser that has one); "Delete character and progress" on a live account (rule tested offline);
+real phones.
+
 ### 2026-11-14 — Phase 2 Milestone A
 Automated: **75 tests, 75 passing** (52 app/engine, 23 database); typecheck clean; build clean.
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Backpack, Feather, Shield, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Award, Backpack, Feather, Lock, Shield, Sparkles } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Panel } from '../components/ui/Panel.tsx';
@@ -11,10 +12,11 @@ import { attributeIds } from '../engine/character/attributes.ts';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { findBackground, findClass, findRace, findTincture } from '../content/character/options.ts';
 import { findTemplate } from '../content/campaigns/catalog.ts';
+import { achievements } from '../content/achievements.ts';
 
 export default function CharacterSheetPage() {
-  const { save } = useGame();
-  const character = save.character;
+  const { player } = useGame();
+  const character = player.character;
   if (!character) return null;
   const race = findRace(character.raceId);
   const cls = findClass(character.classId);
@@ -42,11 +44,11 @@ export default function CharacterSheetPage() {
           </Panel>
 
           <Panel eyebrow="Campaigns" title="Campaign levels">
-            {save.campaigns.length === 0 ? (
+            {player.campaigns.length === 0 ? (
               <p className="text-sm text-ash">No campaigns begun yet.</p>
             ) : (
               <ul className="space-y-4">
-                {save.campaigns.map((c) => (
+                {player.campaigns.map((c) => (
                   <li key={c.id}>
                     <LevelProgress totalXp={c.campaignXp} curve={defaultProgressionConfig.campaignLevels} label={findTemplate(c.templateId)?.module ?? 'Campaign'} compact />
                   </li>
@@ -83,12 +85,18 @@ export default function CharacterSheetPage() {
             <Panel eyebrow="Background" title={bg?.name ?? 'Background'}>
               <p className="text-sm text-ash">{bg?.storyEffect}</p>
               <h3 className="mt-4 flex items-center gap-2 text-xs uppercase tracking-wider text-gold-500">
-                <Backpack className="size-4" aria-hidden /> Starting gear
+                <Backpack className="size-4" aria-hidden /> Carried gear
               </h3>
-              <ul className="mt-2 space-y-1 text-ink">
-                {bg?.startingGear.map((g) => <li key={g}>{g}</li>)}
-              </ul>
-              <p className="mt-3 text-xs text-smoke">Cosmetic for now. Equipment arrives with the inventory.</p>
+              {player.items.length === 0 ? (
+                <p className="mt-2 text-sm text-smoke">Nothing carried.</p>
+              ) : (
+                <ul className="mt-2 space-y-1 text-ink">
+                  {player.items.map((i) => <li key={i.id}>{i.name}</li>)}
+                </ul>
+              )}
+              <p className="mt-3 text-xs text-smoke">
+                Cosmetic for now. <Link to="/inventory" className="text-gold-300 underline-offset-4 hover:underline">Open inventory</Link>
+              </p>
             </Panel>
 
             <Panel eyebrow="Story" title="What drives you">
@@ -104,6 +112,26 @@ export default function CharacterSheetPage() {
               </dl>
             </Panel>
           </div>
+
+          <Panel eyebrow="Achievements" title={`${player.achievements.length} of ${achievements.length} earned`}>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {achievements.map((a) => {
+                const earned = player.achievements.find((e) => e.achievementId === a.id);
+                return (
+                  <li key={a.id} className={earned ? 'flex gap-3 rounded-control border border-gold-600/60 bg-gold-600/10 p-3' : 'flex gap-3 rounded-control border border-iron p-3 opacity-70'}>
+                    {earned ? <Award className="mt-0.5 size-5 shrink-0 text-gold-300" aria-hidden /> : <Lock className="mt-0.5 size-5 shrink-0 text-smoke" aria-hidden />}
+                    <div>
+                      <p className={earned ? 'font-display font-semibold text-gold-100' : 'font-display font-semibold text-ash'}>{a.name}</p>
+                      <p className="text-sm text-ash">{a.description}</p>
+                      <p className="mt-1 text-xs text-smoke">
+                        {earned ? `Earned ${new Date(earned.earnedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}` : 'Not yet earned'}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Panel>
         </div>
       </div>
     </div>

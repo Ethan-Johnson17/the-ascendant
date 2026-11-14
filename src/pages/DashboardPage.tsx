@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ChevronRight, Hourglass, Lock, Map, Pause } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
@@ -16,17 +17,19 @@ import { findTemplate } from '../content/campaigns/catalog.ts';
 import { cn } from '../utils/cn.ts';
 
 export default function DashboardPage() {
-  const { save, pauseCampaign } = useGame();
-  const character = save.character;
+  const { player, pauseCampaign } = useGame();
+  const [pauseError, setPauseError] = useState<string | null>(null);
+  const [pausing, setPausing] = useState(false);
+  const character = player.character;
   if (!character) return null; // guarded by the router
   const cls = findClass(character.classId);
-  const current = currentCampaign(save.campaigns);
+  const current = currentCampaign(player.campaigns);
   const template = current ? findTemplate(current.templateId) : undefined;
-  const otherCount = save.campaigns.length - (current ? 1 : 0);
+  const otherCount = player.campaigns.length - (current ? 1 : 0);
 
   const road = [
     { label: 'Create your character', done: true },
-    { label: 'Begin a campaign', done: save.campaigns.length > 0 },
+    { label: 'Begin a campaign', done: player.campaigns.length > 0 },
     { label: 'Complete your first lesson', done: false, note: 'Lessons arrive in Phase 3' },
     { label: 'Demonstrate knowledge to raise an attribute', done: false, note: 'Phase 3' },
     { label: 'Face your first boss', done: false, note: 'Phase 5' },
@@ -67,22 +70,33 @@ export default function DashboardPage() {
               </Notice>
               <div className="flex flex-wrap gap-2">
                 <ButtonLink to="/campaigns" variant="secondary" icon={<Map className="size-4" aria-hidden />}>
-                  {otherCount > 0 ? `All campaigns (${save.campaigns.length})` : 'Campaigns'}
+                  {otherCount > 0 ? `All campaigns (${player.campaigns.length})` : 'Campaigns'}
                 </ButtonLink>
-                <Button variant="ghost" icon={<Pause className="size-4" aria-hidden />} onClick={() => pauseCampaign(current.id)}>
+                <Button
+                  variant="ghost"
+                  icon={<Pause className="size-4" aria-hidden />}
+                  disabled={pausing}
+                  onClick={async () => {
+                    setPausing(true);
+                    const result = await pauseCampaign(current.id);
+                    setPausing(false);
+                    setPauseError(result.ok ? null : result.error);
+                  }}
+                >
                   Pause
                 </Button>
               </div>
+              {pauseError && <Notice tone="warning">{pauseError}</Notice>}
             </div>
           ) : (
             <div className="space-y-4">
               <p className="text-ash">
-                {save.campaigns.length > 0
+                {player.campaigns.length > 0
                   ? 'All your campaigns are paused. Resume one to continue.'
                   : 'Choose a subject to begin your first campaign. You can run several at once.'}
               </p>
               <ButtonLink to="/campaigns" icon={<Map className="size-4" aria-hidden />}>
-                {save.campaigns.length > 0 ? 'Manage campaigns' : 'Choose a campaign'}
+                {player.campaigns.length > 0 ? 'Manage campaigns' : 'Choose a campaign'}
               </ButtonLink>
             </div>
           )}

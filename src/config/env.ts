@@ -24,16 +24,20 @@ const envSchema = z.object({
         error: 'VITE_SUPABASE_URL must be a full URL, e.g. https://abcd.supabase.co',
       }),
     ),
-  VITE_SUPABASE_ANON_KEY: z
-    .string()
+  VITE_SUPABASE_PUBLISHABLE_KEY: z
+    .string({ error: 'VITE_SUPABASE_PUBLISHABLE_KEY (or the older VITE_SUPABASE_ANON_KEY) is not set' })
     .trim()
-    .min(20, { error: 'VITE_SUPABASE_ANON_KEY looks missing or truncated' }),
+    .min(20, { error: 'VITE_SUPABASE_PUBLISHABLE_KEY looks missing or truncated' })
+    .refine((key) => !key.startsWith('sb_secret_'), {
+      error: 'That is the SECRET key. Use the publishable key: the secret key must never be in the app.',
+    }),
   VITE_AI_MODE: z.enum(aiModes).default('fixtures'),
 });
 
 export interface AppConfig {
   supabaseUrl: string;
-  supabaseAnonKey: string;
+  /** Publishable (or legacy anon) key. Public by design; RLS protects the data. */
+  supabaseKey: string;
   aiMode: AiMode;
 }
 
@@ -47,13 +51,15 @@ export function parseEnv(raw: Record<string, string | undefined>): ConfigResult 
   const cleaned = Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [key, value === '' ? undefined : value]),
   );
+  // Supabase renamed the "anon" key to "publishable"; accept either name.
+  cleaned.VITE_SUPABASE_PUBLISHABLE_KEY ??= cleaned.VITE_SUPABASE_ANON_KEY;
   const parsed = envSchema.safeParse(cleaned);
   if (!parsed.success) {
     return {
       ok: false,
       issues: parsed.error.issues.map((issue) => {
         const key = issue.path.join('.');
-        return issue.code === 'invalid_type' ? `${key} is not set` : issue.message;
+        return issue.code === 'invalid_type' && key !== 'VITE_SUPABASE_PUBLISHABLE_KEY' ? `${key} is not set` : issue.message;
       }),
     };
   }
@@ -61,7 +67,7 @@ export function parseEnv(raw: Record<string, string | undefined>): ConfigResult 
     ok: true,
     config: {
       supabaseUrl: parsed.data.VITE_SUPABASE_URL,
-      supabaseAnonKey: parsed.data.VITE_SUPABASE_ANON_KEY,
+      supabaseKey: parsed.data.VITE_SUPABASE_PUBLISHABLE_KEY,
       aiMode: parsed.data.VITE_AI_MODE,
     },
   };
