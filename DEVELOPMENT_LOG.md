@@ -1,5 +1,36 @@
 # Development Log
 
+## 2026-11-14 — Decisions confirmed
+
+- Race attribute bonuses stay dropped (may be revisited later).
+- Artwork: free-licence art first, AI-generated stills as backup; every asset's licence recorded
+  (`GAME_DESIGN.md` §14).
+- CLAUDE.md Part 18 rewritten to the `MASTER_PROMPT.md` phase order, with the approval recorded there.
+
+## 2026-11-13 — Phase 1: application foundation and visual identity
+
+**Product owner decisions:** schema approved; attributes start at 1 and grow only from demonstrated
+knowledge; race/class/background table approved. Race attribute bonuses were dropped because they
+conflict with start-at-1 (flagged for confirmation). All recorded in `GAME_DESIGN.md` §3.
+
+**Built:** app shell and navigation, welcome, 7-step character creation, dashboard, character sheet,
+campaign selection, settings, reusable components, error screen. See ROADMAP Phase 1.
+
+**Architecture choices:**
+- *Local save until Phase 2.* Character creation and campaign actions had to do something real, and
+  accounts are Phase 2. Rather than mock them, the app saves to the browser through a `SaveStore`
+  interface (`src/services/save/`). Phase 2 swaps in Supabase behind the same interface.
+- *Content separated from engine.* Races/classes/backgrounds and the campaign catalogue live in
+  `src/content/`; the engine takes the list of valid ids as input, so new options need no engine change.
+- *React context, no state library.* One `GameProvider` holds the save; all rules run in the engine.
+- *Sample adventurer* in `src/fixtures/` so the design can be judged with progress on screen;
+  memory-only, labelled, never written to storage.
+- *Per-page code-splitting* with `React.lazy`, which fixed the Phase 0 bundle-size warning.
+- *Placeholder art:* heraldic crests (tincture + class emblem) until an art source is chosen.
+
+**Open:** art source; confirm dropping race attribute bonuses; attribute growth formula (Phase 2–3);
+beta AI provider (Phase 4); CLAUDE.md Part 18 still shows the old phase order.
+
 ## 2026-11-13 — Phase 0 verified on a real machine; Phase 0 complete
 
 **Environment:** Windows 11, nvm-windows with Node 12/14/18/24 installed; system default was 18.17.
