@@ -28,4 +28,21 @@ describe('parseEnv', () => {
     assert.equal(result.ok, false);
     if (!result.ok) assert.equal(result.issues.length, 2);
   });
+
+  it('prefers the publishable key and falls back to the legacy anon key', () => {
+    const both = parseEnv({
+      VITE_SUPABASE_URL: valid.VITE_SUPABASE_URL,
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abcdefghijklmnopqrst',
+      VITE_SUPABASE_ANON_KEY: valid.VITE_SUPABASE_ANON_KEY,
+    });
+    assert.ok(both.ok && both.config.supabaseKey.startsWith('sb_publishable_'));
+    const legacy = parseEnv(valid);
+    assert.ok(legacy.ok && legacy.config.supabaseKey === valid.VITE_SUPABASE_ANON_KEY);
+  });
+
+  it('refuses a secret key', () => {
+    const result = parseEnv({ VITE_SUPABASE_URL: valid.VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_abcdefghijklmnopqrstuvwxyz' });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.issues.join(' '), /SECRET/);
+  });
 });

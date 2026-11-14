@@ -4,14 +4,14 @@ import type { AppConfig } from '../config/env.ts';
 /**
  * Browser Supabase client.
  *
- * Uses the public anon key only. All access control is enforced in the database by
+ * Uses the public publishable (anon) key only. All access control is enforced in the database by
  * Row Level Security; authoritative game-state writes (XP, mastery, boss outcomes) go
  * through server-side functions that run the game engine, never direct table writes.
  */
 let client: SupabaseClient | null = null;
 
 export function getSupabase(config: AppConfig): SupabaseClient {
-  client ??= createClient(config.supabaseUrl, config.supabaseAnonKey, {
+  client ??= createClient(config.supabaseUrl, config.supabaseKey, {
     auth: { persistSession: true, autoRefreshToken: true },
   });
   return client;
