@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/*
+ * THE ASCENDANT — design tokens
+ *
+ * Every colour, font and radius used by the UI comes from here. Components use the
+ * generated Tailwind utilities (bg-abyss, text-gold-300, font-display, ...), never raw hex
+ * values, so the visual identity can be tuned in one place.
+ *
+ * Direction (GAME_DESIGN.md §14): charcoal / near-black surfaces, muted gold accents,
+ * restrained ornamentation, elegant type, parchment only where it earns its place.
+ */
+@theme {
+  /* Surfaces, darkest to lightest */
+  --color-abyss: #0e0e10;      /* app background */
+  --color-obsidian: #16161a;   /* primary panels */
+  --color-charcoal: #1f1f24;   /* raised panels, cards */
+  --color-slate: #2a2a31;      /* inputs, hover states */
+  --color-iron: #3a3a43;       /* borders, dividers */
+
+  /* Muted gold accent scale */
+  --color-gold-100: #f3e7c4;
+  --color-gold-200: #e6d29a;
+  --color-gold-300: #d4b872;   /* primary accent */
+  --color-gold-400: #b8975a;   /* borders on accented elements */
+  --color-gold-500: #8f7343;
+  --color-gold-600: #5e4b2c;
+
+  /* Text */
+  --color-ink: #ece8df;        /* primary text on dark */
+  --color-ash: #a7a29a;        /* secondary text */
+  --color-smoke: #6f6b65;      /* tertiary / disabled */
+
+  /* Parchment (lesson panels, codex pages) */
+  --color-parchment: #e9dfc7;
+  --color-parchment-ink: #2b2418;
+
+  /* Semantic */
+  --color-vital: #7fa87a;      /* success, mastery gained */
+  --color-ember: #c0654a;      /* failure, damage */
+  --color-arcane: #7c8fc4;     /* information, AI-generated content marker */
+  --color-warning: #d09a4a;
+
+  /* Typography */
+  --font-display: "Cinzel", "Times New Roman", serif;     /* titles, headings */
+  --font-serif: "Cormorant Garamond", Georgia, serif;     /* narrative and lesson prose */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif; /* UI, data, controls */
+
+  /* Shape */
+  --radius-panel: 0.75rem;
+  --radius-control: 0.5rem;
+
+  /* Motion (mirrored in src/styles/motion.ts for Framer Motion) */
+  --ease-ascend: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-abyss text-ink font-sans antialiased;
+    min-height: 100dvh;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-gold-300);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
