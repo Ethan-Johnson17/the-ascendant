@@ -31,4 +31,14 @@ describe('campaign catalogue', () => {
     assert.ok(unique(campaignTemplates.map((t) => t.id)));
     assert.ok(campaignTemplates.some((t) => t.subject === 'History' && t.module === 'Ancient Mesopotamia'));
   });
+
+  it('gives every template six sub-skills and ties every competency to one of them', () => {
+    for (const t of campaignTemplates) {
+      assert.deepEqual(Object.keys(t.subSkills).sort(), [...attributeIds].sort(), t.id);
+      assert.ok(unique(t.competencies.map((c) => c.key)), `${t.id} competency keys`);
+      for (const c of t.competencies) assert.ok(attributeIds.includes(c.attribute), `${t.id}/${c.key}`);
+      // Every sub-skill has at least one competency, so every attribute can grow in this subject.
+      for (const a of attributeIds) assert.ok(t.competencies.some((c) => c.attribute === a), `${t.id} has no ${a} competency`);
+    }
+  });
 });

@@ -1,3 +1,5 @@
+import type { AttributeId } from '../../engine/character/attributes.ts';
+
 /**
  * Campaign catalogue — authored campaign templates players can begin.
  *
@@ -5,6 +7,13 @@
  * curriculum; Phase 3–4 adds player-generated campaigns for any subject. Adding a template here
  * requires no engine or UI changes.
  */
+export interface CompetencyOutline {
+  /** Stable key, unique within the template; used as the database id suffix. */
+  readonly key: string;
+  readonly name: string;
+  readonly attribute: AttributeId;
+}
+
 export interface CampaignTemplate {
   readonly id: string;
   readonly subject: string;
@@ -14,11 +23,13 @@ export interface CampaignTemplate {
   readonly region: string;
   readonly description: string;
   readonly curriculumVersion: number;
+  /** Six sub-skills, one per attribute (GAME_DESIGN.md §3, decided 2026-11-14). */
+  readonly subSkills: Readonly<Record<AttributeId, string>>;
   /**
-   * Planned competency outline from GAME_DESIGN.md §15. Names only: definitions, attribute
-   * mappings, lessons and sources are authored in Phase 6 and verified before release.
+   * Competency outline from GAME_DESIGN.md §15, each tied to one sub-skill (attribute).
+   * Descriptions, lessons and sources are authored in Phase 6 and verified before release.
    */
-  readonly plannedCompetencies: readonly string[];
+  readonly competencies: readonly CompetencyOutline[];
   /** Planned boss encounters from GAME_DESIGN.md §15. */
   readonly plannedBosses: readonly string[];
 }
@@ -35,17 +46,25 @@ export const campaignTemplates: readonly CampaignTemplate[] = [
       'Walk the floodplains between two rivers, where irrigation, writing, written law and some of the world’s earliest cities took shape. ' +
       'Learn how geography shaped settlement, how city-states governed and traded, and how historians read the evidence left behind.',
     curriculumVersion: 0,
-    plannedCompetencies: [
-      'Historical chronology',
-      'Geography and environment',
-      'Agriculture and settlement',
-      'Political organization',
-      'Economics and trade',
-      'Law and institutions',
-      'Military development',
-      'Religion and culture',
-      'Historical source analysis',
-      'Cause-and-effect reasoning',
+    subSkills: {
+      str: 'Power and conflict',
+      dex: 'Working with evidence',
+      con: 'Time and continuity',
+      int: 'Societies and economies',
+      wis: 'Applying history',
+      cha: 'Culture and belief',
+    },
+    competencies: [
+      { key: 'chronology', name: 'Historical chronology', attribute: 'con' },
+      { key: 'geography', name: 'Geography and environment', attribute: 'int' },
+      { key: 'agriculture', name: 'Agriculture and settlement', attribute: 'int' },
+      { key: 'political-organization', name: 'Political organization', attribute: 'str' },
+      { key: 'economics-trade', name: 'Economics and trade', attribute: 'int' },
+      { key: 'law-institutions', name: 'Law and institutions', attribute: 'str' },
+      { key: 'military', name: 'Military development', attribute: 'str' },
+      { key: 'religion-culture', name: 'Religion and culture', attribute: 'cha' },
+      { key: 'source-analysis', name: 'Historical source analysis', attribute: 'dex' },
+      { key: 'cause-effect', name: 'Cause-and-effect reasoning', attribute: 'wis' },
     ],
     plannedBosses: ['The Challenge of the Floodplain', 'The Rival City-States', 'The Crisis of the Kingdom', 'The Fall of an Empire'],
   },

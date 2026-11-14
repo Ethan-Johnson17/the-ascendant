@@ -5,7 +5,11 @@ Run all automated tests: `npm test`
 ## Approach
 - **Engine** (`src/engine/**`): unit tests for every rule. Pure functions, no mocks needed.
 - **Config/validation**: unit tests for every schema boundary.
-- **Database** (Phase 2+): migration tests and RLS tests proving one user cannot read another's rows.
+- **Database** (`supabase/tests/`): the real migration files run inside PGlite (Postgres compiled to
+  WebAssembly) with a small test-only stand-in for Supabase's roles and `auth.uid()`
+  (`supabase-shim.sql`). Tests act as signed-in players, signed-out visitors and the server role.
+  No Docker, network or Supabase account needed. The stand-in grants Supabase's broad default
+  privileges, so the tests prove the migrations lock things down themselves.
 - **Edge Functions** (Phase 2+): integration tests with fixture AI, including duplicate-submission tests.
 - **UI** (Phase 1+): manual test scripts per screen on a phone-sized and desktop viewport; component
   tests added where logic lives in components.
@@ -18,16 +22,34 @@ Run all automated tests: `npm test`
 | Attributes start at 1 for every race/class/background | Tested (`createCharacter.test.ts`) |
 | Campaigns are independent; pause/resume keeps progress | Tested (`campaigns.test.ts`), local only until Phase 2 |
 | Stored save is validated; tampered/corrupt data rejected and backed up | Tested (`saveStore.test.ts`) |
-| XP cannot be awarded twice for the same activity | Not started (Phase 2) |
-| Campaign XP isolated per campaign | Partly tested in the engine (`campaigns.test.ts`); database ledger in Phase 2 |
+| XP cannot be awarded twice for the same activity | Tested (`xpAward.test.ts`, `supabase/tests/security.test.ts`) |
+| Campaign XP isolated per campaign | Tested (`xpAward.test.ts`, `security.test.ts`) |
+| Players cannot set their own attributes, XP, mastery or campaign completion | Tested (`security.test.ts`) |
+| Attribute scores derive from competency mastery | Tested (`attributeGrowth.test.ts`); fed by real evidence in Phase 3 |
+| Database content matches `src/content` | Tested (`supabase/tests/content-sync.test.ts`) |
 | Competency progression follows defined requirements | Not started (Phase 3) |
 | Mastery decisions require evidence | Not started (Phase 3) |
 | Bosses cannot unlock prematurely | Not started (Phase 5) |
 | Boss failure does not erase permanent progression | Not started (Phase 5) |
-| Users cannot access other users' records | Not started (Phase 2) |
+| Users cannot access other users' records | Tested offline (`security.test.ts`); re-checked on the live project in Milestone B |
 | AI outputs cannot bypass engine rules | Not started (Phase 4) |
 
 ## Current results
+
+### 2026-11-14 — Phase 2 Milestone A
+Automated: **75 tests, 75 passing** (52 app/engine, 23 database); typecheck clean; build clean.
+
+Database tests cover: profile created on sign-up; new character starts with all attributes at 1,
+zero XP, background starting gear and the first achievement; player-supplied attributes or XP refused;
+no character for another user; one character per player; bad races and names rejected; rename allowed
+but attributes/XP not editable; another player's rows invisible and unchangeable across all seven
+player tables; signed-out visitors read content only; campaign start creates Novice progress for all
+ten competencies; no duplicate campaigns; pause/resume allowed; completion and campaign XP not
+player-editable; mastery not player-editable; another player's private template refused; players
+cannot call the XP function or write the ledger; duplicate XP refused; campaign XP isolated; XP
+cannot be credited to someone else's campaign; "delete my progress" removes only the caller's data.
+
+Not covered yet: the same rules on a live Supabase project (Milestone B).
 
 ### 2026-11-13 — Phase 1
 Automated: **39 tests, 39 passing**; typecheck clean; build clean (no bundle-size warning after

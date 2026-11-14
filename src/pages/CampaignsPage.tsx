@@ -77,7 +77,13 @@ export default function CampaignsPage() {
                     <div className="grid gap-6 px-4 pb-4 pt-1 sm:grid-cols-2">
                       <div>
                         <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold-500"><Landmark className="size-4" aria-hidden />Competencies</p>
-                        <ul className="mt-2 space-y-1 text-sm text-ink">{t.plannedCompetencies.map((c) => <li key={c}>{c}</li>)}</ul>
+                        <ul className="mt-2 space-y-1 text-sm text-ink">
+                          {t.competencies.map((c) => (
+                            <li key={c.key}>
+                              {c.name} <span className="text-xs text-smoke">· {t.subSkills[c.attribute]} ({c.attribute.toUpperCase()})</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                       <div>
                         <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold-500"><Swords className="size-4" aria-hidden />Boss encounters</p>
