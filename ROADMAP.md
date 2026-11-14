@@ -47,7 +47,7 @@ code-splitting as part of routing.
 | Local save (validated; corrupt data set aside, never silently destroyed) | Tested |
 | Error screen if a page crashes | Implemented |
 | Sample adventurer fixture (`src/fixtures/`, labelled "Sample data" in the UI, memory-only) | Mocked — by design |
-| **Storage is this browser only** | Partial — Supabase accounts replace it in Phase 2 Milestone B |
+| Storage | Replaced by Supabase accounts in Phase 2 Milestone B |
 | Character artwork | Placeholder — heraldic crests. Source decided 2026-11-14: free-licence first, AI stills as backup |
 | Edit character after creation | Not started |
 
@@ -55,7 +55,7 @@ Screens CLAUDE.md lists for Phase 1 but `MASTER_PROMPT.md` places later (campaig
 learning interface, boss interface) arrive with the phases that give them real data (3 and 5).
 They are not shown in navigation until they work.
 
-## Phase 2 — Character and game systems — *In progress*
+## Phase 2 — Character and game systems — *Tested (2026-11-14, PR awaiting review)*
 
 Split into two milestones. **A** needs nothing from the product owner; **B** needs a Supabase project.
 
@@ -75,11 +75,26 @@ Split into two milestones. **A** needs nothing from the product owner; **B** nee
 | Starting gear granted from background | Tested offline |
 | "Delete my progress" (only the caller's data) | Tested offline |
 
-### Milestone B — accounts and the online app — *Not started (waiting for Supabase project details)*
+### Milestone B — accounts and the online app — *Tested live (2026-11-14, PR awaiting review)*
 
-Sign-up, sign-in, password reset, sign-out; app reads and writes Supabase instead of browser storage;
-one-time import of a character saved in this browser; inventory screen; achievements display;
-download and delete from the database; live testing.
+| Item | Status |
+|---|---|
+| Supabase project connected; migrations applied (`supabase db push --remote`) | Tested live |
+| Sign up with email confirmation | Tested live by the product owner |
+| Sign in, sign out | Implemented; sign-out tested in the browser |
+| Forgot password / choose new password | Implemented — not yet tested with a real reset email |
+| Character, campaigns, gear and achievements saved to the account and reloaded | Tested live |
+| Begin / pause / resume campaign online | Tested live |
+| Inventory screen | Tested live |
+| Achievements on the character sheet | Tested live |
+| Download my data (from the account) | Tested live |
+| Delete character and progress | Implemented; database rule tested offline (not run on the owner's account) |
+| Import a character saved in this browser before accounts | Implemented — not tested live (no such save in the test browser) |
+| Players cannot raise their own attributes, XP or completion (live attempts from a signed-in browser) | Tested live — all refused |
+| Display settings stored per device | Tested (unit tests) |
+| Deleting the sign-in account itself | Not started — planned before public beta |
+| Custom SMTP for sign-up and reset emails | Not started — required before beta (`COSTS.md`) |
+| Sign in with Google | Not started (decided: later) |
 
 XP is not yet *earned* through play — awards come from server functions when lessons exist (Phase 3).
 

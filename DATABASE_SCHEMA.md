@@ -1,7 +1,8 @@
 # The Ascendant — Database Schema
 
-Status: **Approved by the product owner 2026-11-13.** Phase 2 tables are written as migrations and
-tested offline (see "Implemented in Phase 2" below); not yet applied to a live Supabase project.
+Status: **Approved by the product owner 2026-11-13.** Phase 2 tables are written as migrations,
+tested offline, and applied to the live Supabase project on 2026-11-14 (see "Implemented in Phase 2").
+`profiles.settings` exists but is unused for now: display settings are kept per device.
 The remaining tables are planned for Phases 3–5.
 
 ## Implemented in Phase 2

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Phase 2 Milestone B
+- Accounts: sign up (with email confirmation), sign in, forgot/reset password, sign out.
+- Your character and campaigns are saved to your account instead of this browser.
+- Inventory screen; achievements on the character sheet.
+- Download your data from the account; delete your character and progress.
+- Characters saved in this browser before accounts can be imported once.
+
 ## Unreleased — Phase 2 Milestone A
 - Database schema, security rules and content seed as Supabase migrations (tested offline).
 - XP ledger that refuses duplicate awards and keeps campaign XP separate.
