@@ -55,7 +55,7 @@ Screens CLAUDE.md lists for Phase 1 but `MASTER_PROMPT.md` places later (campaig
 learning interface, boss interface) arrive with the phases that give them real data (3 and 5).
 They are not shown in navigation until they work.
 
-## Phase 2 — Character and game systems — *Tested (2026-11-14, PR awaiting review)*
+## Phase 2 — Character and game systems — *Complete (merged 2026-11-14, PR #3)*
 
 Split into two milestones. **A** needs nothing from the product owner; **B** needs a Supabase project.
 
@@ -75,7 +75,7 @@ Split into two milestones. **A** needs nothing from the product owner; **B** nee
 | Starting gear granted from background | Tested offline |
 | "Delete my progress" (only the caller's data) | Tested offline |
 
-### Milestone B — accounts and the online app — *Tested live (2026-11-14, PR awaiting review)*
+### Milestone B — accounts and the online app — *Tested live (2026-11-14)*
 
 | Item | Status |
 |---|---|
