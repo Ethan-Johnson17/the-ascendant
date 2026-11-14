@@ -1,6 +1,6 @@
 # The Ascendant — Database Schema (proposed)
 
-Status: **Proposed in Phase 0, implemented as migrations in Phase 2–5.** Nothing below exists yet.
+Status: **Approved by the product owner 2026-11-13; implemented as migrations in Phase 2–5.** Nothing below exists in a database yet.
 
 Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 
@@ -22,7 +22,7 @@ Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 | Table | Key columns | Notes |
 |---|---|---|
 | `profiles` | `user_id` PK → `auth.users`, `display_name`, `settings jsonb`, `created_at` | Created on sign-up by trigger |
-| `characters` | `id`, `user_id` **unique**, `name`, `race`, `class`, `background`, `appearance jsonb`, `str/dex/con/int/wis/cha smallint` (check 1–30), `personality jsonb`, `total_xp`*, `level`*, `created_at` | One persistent character per player. *cache columns |
+| `characters` | `id`, `user_id` **unique**, `name`, `race`, `class`, `background`, `appearance jsonb`, `str/dex/con/int/wis/cha smallint`* (start at 1; derived by the engine from mastery evidence — never set by the player), `personality jsonb`, `total_xp`*, `level`*, `created_at` | One persistent character per player. *cache columns |
 
 ### Campaign content
 | Table | Key columns | Notes |
@@ -56,7 +56,7 @@ Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 |---|---|
 | `ai_requests` | `user_id`, `role`, `provider`, `model`, `input_tokens`, `output_tokens`, `latency_ms`, `status`, `created_at` — usage log and budget enforcement |
 
-## Changes from CLAUDE.md's starting schema (for your approval)
+## Changes from CLAUDE.md's starting schema (approved 2026-11-13)
 
 1. **Definitions split from progress** (`competency_definitions` vs `competency_progress`, etc.).
    The original put `mastery_level` on the competency itself, which would force a copy of every

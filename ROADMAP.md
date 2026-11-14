@@ -14,7 +14,7 @@ Verified on the product owner's Windows 11 machine with Node 24.21 (see `TESTING
 |---|---|
 | Repository inspection | Tested — no prior code existed |
 | Architecture documented (`ARCHITECTURE.md`) | Implemented |
-| Database architecture proposed (`DATABASE_SCHEMA.md`) | Implemented (design only — awaiting approval) |
+| Database architecture proposed (`DATABASE_SCHEMA.md`) | Implemented (design only — approved 2026-11-13) |
 | AI architecture designed (`AI_SYSTEM.md`) | Implemented (design only) |
 | Free tiers and costs (`COSTS.md`) | Implemented |
 | TypeScript, Vite, Tailwind v4, test runner configured | Tested — `npm install`, `npm test`, `npm run typecheck`, `npm run build`, `npm run dev` all pass |
@@ -30,9 +30,30 @@ Verified on the product owner's Windows 11 machine with Node 24.21 (see `TESTING
 **Known, accepted for now:** the production bundle is ~660 KB (warning only). Phase 1 adds per-page
 code-splitting as part of routing.
 
-## Phase 1 — Application foundation and visual identity — *Not started*
-App shell, navigation, responsive layouts, dashboard, character creation UI, character sheet,
-campaign selection, settings, reusable components. Mock data clearly labelled.
+## Phase 1 — Application foundation and visual identity — *Tested (2026-11-13, PR awaiting review)*
+
+| Item | Status |
+|---|---|
+| App shell: desktop sidebar, mobile bottom navigation, skip link, safe-area padding | Tested |
+| Routing with per-page code-splitting; new players routed to onboarding | Tested |
+| Welcome / onboarding screen | Tested |
+| Character creation (7 steps: name, race, class, background, crest, story, review) | Tested — engine-validated, attributes all start at 1 |
+| Main dashboard (character, current campaign, road ahead, attributes) | Tested |
+| Character sheet (level, attributes, trait/ability, gear, story, campaign levels) | Tested |
+| Campaign selection: begin, pause, resume, make current | Tested — History pilot listed as an outline only |
+| Settings: motion preference, download save, delete character, sample preview, system status | Tested |
+| Reusable components (Button, Panel, PageHeader, ProgressBar, Badge, Notice, TextField/TextArea, OptionCard, ConfirmDialog, Crest, AttributeTile) | Implemented, used across all screens |
+| Engine: character creation rules, campaign lifecycle | Tested (unit tests) |
+| Local save (validated; corrupt data set aside, never silently destroyed) | Tested |
+| Error screen if a page crashes | Implemented |
+| Sample adventurer fixture (`src/fixtures/`, labelled "Sample data" in the UI, memory-only) | Mocked — by design |
+| **Storage is this browser only** | Partial — Supabase accounts replace it in Phase 2 |
+| Character artwork | Placeholder — heraldic crests; real art needs a source decision |
+| Edit character after creation | Not started |
+
+Screens CLAUDE.md lists for Phase 1 but `MASTER_PROMPT.md` places later (campaign dashboard, skill tree,
+learning interface, boss interface) arrive with the phases that give them real data (3 and 5).
+They are not shown in navigation until they work.
 
 ## Phase 2 — Character and game systems — *Not started*
 Migrations + RLS, auth, character creation persisted, races/classes/backgrounds, attributes, XP
@@ -68,12 +89,14 @@ Six roles, provider abstraction, schema validation, retries, context management,
    `DEVELOPMENT_LOG.md`, `DATABASE_SCHEMA.md`, `AI_SYSTEM.md`, `TESTING.md`, `README.md`. Resolution: maintain all.
 3. **Screen lists differ slightly.** Design doc has "NPC interaction" and "Victory/defeat cinematic";
    CLAUDE.md has "Character sheet" and "Battle resolution". Resolution: build the union.
-4. **Schema refinements** proposed in `DATABASE_SCHEMA.md` (definitions vs. progress, ledgers) — awaiting approval.
+4. **Schema refinements** proposed in `DATABASE_SCHEMA.md` — **approved 2026-11-13.**
 5. **Node version.** The Phase 0 README said "Node 22 or newer" but nothing enforced it; on Node 18
    the tools fail with confusing errors. Now enforced (see Phase 0 table).
-6. **Unspecified mechanics** that will need your call before Phase 2: attribute allocation method
-   (point-buy vs. standard array vs. rolling), what each race/class/background actually grants, and
-   how attributes affect gameplay (e.g. boss checks) given they're shared across subjects.
+6. **Character mechanics** — **decided 2026-11-13** (recorded in `GAME_DESIGN.md` §3): attributes all
+   start at 1 and grow only from demonstrated knowledge; race/class/background affect encounter tactics
+   and story only. Race attribute bonuses from the first proposal were dropped because they conflict
+   with the start-at-1 rule. **Still open:** the attribute growth formula (Phase 2–3) and beta AI
+   provider (Phase 4).
 
 ## Technical risks
 

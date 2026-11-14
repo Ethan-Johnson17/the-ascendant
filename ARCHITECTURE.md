@@ -1,6 +1,6 @@
 # The Ascendant — Architecture
 
-Status: **Phase 0 complete (2026-11-13).** This describes the target architecture and marks what exists today.
+Status: **Phase 1 (2026-11-13).** This describes the target architecture and marks what exists today.
 `GAME_DESIGN.md` is the product authority; this document explains how the code delivers it.
 
 ---
@@ -51,21 +51,26 @@ outcomes authoritative while letting the browser show instant previews from iden
 
 ```
 src/
-  app/          App root, router, providers (Phase 1)
-  pages/        One component per screen (Phase 1+)
-  layouts/      Shell, navigation frames (Phase 1)
-  components/   Reusable UI primitives — Panel, Button, StatBar, Modal … (Phase 1)
+  app/          App root, router, GameProvider (app state), ErrorBoundary  ← exists
+  pages/        One lazily loaded component per screen  ← exists
+  layouts/      AppShell (sidebar / bottom nav), FocusLayout (onboarding)  ← exists
+  components/   ui/ primitives (Button, Panel, ProgressBar, OptionCard, ConfirmDialog …) and
+                game/ pieces (Crest, AttributeTile)  ← exists
   features/     Domain UI modules: character, campaigns, learning, quests, combat, codex,
                 weaknesses, inventory, settings. Each holds hooks + components for its domain.
   engine/       ★ Deterministic game engine. Pure TS, zero dependencies on React, Supabase,
                 Node or Deno. Imported by both the browser and Edge Functions.
     progression/  XP config, level curves  ← exists (Phase 0)
+    character/    attributes (start at 1), character creation rules  ← exists
+    campaigns/    campaign lifecycle: start, pause, resume, current  ← exists
     competency/   mastery stages, evidence rules (Phase 2–3)
     retention/    spaced-repetition scheduling (Phase 3)
     quests/       objective + success-condition evaluation (Phase 5)
     combat/       boss eligibility, encounter state machine, resolution (Phase 5)
-  content/      Authored, versioned campaign content (History pilot) as data, not code (Phase 6)
-  services/     Supabase client, API client for Edge Functions  ← supabase.ts exists
+  content/      Authored content as data: character options, campaign catalogue  ← exists;
+                full History pilot curriculum (Phase 6)
+  fixtures/     Clearly labelled development data (sample adventurer)  ← exists
+  services/     Supabase client; save/ = validated local save behind a SaveStore interface  ← exists
   config/       Environment parsing and validation  ← exists
   types/        Shared types / schemas (zod) used on both sides of the wire
   hooks/        Generic hooks (media queries, reduced motion …)
@@ -97,9 +102,11 @@ importable by server code. No product requirement changes.
 
 ## 5. Game-state management (client)
 
-- **Server state** (character, campaigns, progress) is fetched from Supabase and cached per screen.
-  Phase 1 will decide between a small hand-rolled cache and TanStack Query; the default is to avoid the
-  dependency unless caching complexity justifies it.
+- **Phase 1:** one `GameProvider` (React context) holds the player's save and exposes actions
+  (`createCharacter`, `startCampaign`, `pauseCampaign` …). Each action calls the engine, then writes the
+  result through `SaveStore` (browser localStorage, validated with zod on every load).
+- **Phase 2:** `SaveStore` is replaced by Supabase reads plus Edge Function calls for state changes;
+  screens keep using the same actions. No state-management library is needed yet.
 - **UI state** (open panels, form drafts) stays in React component state.
 - The client never holds a writable "source of truth" for XP or mastery.
 
@@ -134,5 +141,8 @@ importable by server code. No product requirement changes.
 | Design tokens | Implemented |
 | Environment validation | Implemented, tested |
 | Supabase client + connection check | Implemented, untested against a live project |
-| Engine: progression config + level curve | Implemented, tested (15 tests) |
+| Engine: progression config + level curve | Implemented, tested |
+| App shell, navigation, 6 screens, reusable components | Implemented, manually tested (Phase 1) |
+| Engine: character creation, campaign lifecycle | Implemented, tested |
+| Local save (validated) | Implemented, tested; replaced by Supabase in Phase 2 |
 | Everything else | Not started |

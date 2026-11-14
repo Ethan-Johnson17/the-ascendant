@@ -89,6 +89,47 @@ Example for digital marketing:
 
 These mappings must be explicitly defined in each campaign's competency framework.
 
+## Attribute scores (product owner decision, 2026-11-13)
+
+- Every attribute starts at **1** for every character. There is no point-buy, standard array or rolling.
+- An attribute rises only when the player **demonstrates** real-world knowledge in a competency mapped
+  to that attribute (per the campaign's competency framework). Attributes measure real knowledge.
+- Race, class and background **never** change attribute scores.
+- The exact growth formula (how much mastery evidence raises a score, and the maximum score) is a
+  configurable engine rule to be defined in Phase 2–3 and approved by the product owner.
+
+## Race, class and background effects (product owner decision, 2026-11-13)
+
+Rule: these choices shape boss-encounter tactics and story only. They never change XP rates, mastery,
+attribute scores, or which subjects a player may study. Encounter traits and abilities take effect
+when boss encounters are built (Phase 5).
+
+| Race | Trait (in boss encounters) |
+|---|---|
+| Human | **Adaptable:** once per boss, answer a check with a different competency the player has mastered |
+| Elf | **Keen Insight:** one free hint per boss |
+| Dwarf | **Stalwart:** +1 Resolve (staying power) per encounter |
+| Halfling | **Lucky:** once per boss, retry a failed check with a new question |
+
+| Class | Signature attributes (story flavour only) | Ability (once per boss) |
+|---|---|---|
+| Fighter | STR, CON | **Second Wind:** a correct answer restores 1 Resolve |
+| Ranger | DEX, WIS | **Scout Ahead:** preview which competencies the next phase tests |
+| Rogue | DEX, CHA | **Gambit:** skip a question and face it later |
+| Wizard | INT, WIS | **Arcane Recall:** open one Codex entry mid-battle |
+| Cleric | WIS, CHA | **Sanctuary:** the first wrong answer costs no Resolve |
+
+| Background | Starting gear (cosmetic in MVP) | Story effect |
+|---|---|---|
+| Soldier | Worn spear, campaign map | Military and strategy dialogue options |
+| Scholar | Quill, wax tablet | Scribe and archivist contacts |
+| Merchant | Trade ledger, coin purse | Trade and caravan dialogue options |
+| Artisan | Craft tools | Workshop and guild contacts |
+| Explorer | Walking staff, star chart | Traveller and geography dialogue options |
+
+Note: the originally proposed race attribute bonuses (e.g. Elf +2 DEX) were dropped because they
+conflict with the all-start-at-1 rule above. Classes' signature attributes have no numeric effect.
+
 ## Progression
 
 Maintain separate progression records for:

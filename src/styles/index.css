@@ -67,10 +67,28 @@
     outline: 2px solid var(--color-gold-300);
     outline-offset: 2px;
   }
+  /* Motion: follows the OS unless the player chose otherwise in Settings (html[data-motion]). */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    html:not([data-motion="full"]) *,
+    html:not([data-motion="full"]) *::before,
+    html:not([data-motion="full"]) *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+  html[data-motion="reduced"] *,
+  html[data-motion="reduced"] *::before,
+  html[data-motion="reduced"] *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Subtle atmosphere behind every screen: a faint warm glow from above, no busy textures. */
+@layer base {
+  body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in oklab, var(--color-gold-600) 22%, transparent), transparent 70%);
+    background-attachment: fixed;
   }
 }

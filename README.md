@@ -2,7 +2,7 @@
 
 An educational RPG in which **your real-world knowledge is the source of your character's power.**
 
-Current stage: **Phase 0 complete; Phase 1 next.** See `ROADMAP.md` for status.
+Current stage: **Phase 1, application foundation.** See `ROADMAP.md` for status.
 
 ## Running it on your computer (first time)
 
@@ -23,15 +23,16 @@ That's deliberate: it prevents confusing errors later.
 3. Run the tests — you should see `pass 15` and `fail 0`: `npm test`
 4. Start the app: `npm run dev`, then open http://localhost:5173 in your browser. Stop it with `Ctrl + C`.
 
-Without a database configured, the status screen will show **Configuration: needs attention** —
-that's expected until Supabase is set up (Phase 2 will walk you through it).
+You'll see the welcome screen. Create a character, or choose **Preview with a sample adventurer**
+to see the app with progress on screen. For now your progress is saved in that browser only.
+**Settings → System status** shows *Configuration: needs attention* until Supabase is set up in Phase 2.
 
 ## Connecting Supabase (when we reach that step)
 
 1. Create a free account at https://supabase.com and a new project.
 2. In the project: **Project Settings → API**. Copy the Project URL and the `anon` public key.
 3. In the project folder, copy `.env.example` to a new file named `.env.local` and paste the two values.
-4. Restart `npm run dev`. The status screen should show **Database: Connected**.
+4. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
 
 Never paste the `service_role` key or any AI provider key into `.env.local`.
 

@@ -1,7 +1,7 @@
 {
   "name": "the-ascendant",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "An educational RPG in which the player's real-world knowledge is the source of their character's power.",
   "type": "module",
   "engines": {

@@ -15,8 +15,11 @@ Run all automated tests: `npm test`
 | Invariant | Status |
 |---|---|
 | Levels update correctly from XP | Tested (`levels.test.ts`) |
+| Attributes start at 1 for every race/class/background | Tested (`createCharacter.test.ts`) |
+| Campaigns are independent; pause/resume keeps progress | Tested (`campaigns.test.ts`), local only until Phase 2 |
+| Stored save is validated; tampered/corrupt data rejected and backed up | Tested (`saveStore.test.ts`) |
 | XP cannot be awarded twice for the same activity | Not started (Phase 2) |
-| Campaign XP isolated per campaign | Not started (Phase 2) |
+| Campaign XP isolated per campaign | Partly tested in the engine (`campaigns.test.ts`); database ledger in Phase 2 |
 | Competency progression follows defined requirements | Not started (Phase 3) |
 | Mastery decisions require evidence | Not started (Phase 3) |
 | Bosses cannot unlock prematurely | Not started (Phase 5) |
@@ -25,6 +28,34 @@ Run all automated tests: `npm test`
 | AI outputs cannot bypass engine rules | Not started (Phase 4) |
 
 ## Current results
+
+### 2026-11-13 — Phase 1
+Automated: **39 tests, 39 passing**; typecheck clean; build clean (no bundle-size warning after
+per-page code-splitting).
+
+Manual walkthrough in the in-app browser (desktop and 375 px phone width):
+
+| Journey | Result |
+|---|---|
+| Fresh visit → redirected to Welcome | Pass |
+| Create a character through all 7 steps (Enter key, "Change" links, focus moves to each new step heading) | Pass |
+| Character saved; survives reload; all attributes 1, XP 0 | Pass |
+| Dashboard and character sheet show the real character | Pass |
+| Begin History campaign → current campaign; pause → resume; status persisted | Pass |
+| Motion setting saved and applied | Pass |
+| Sample adventurer: banner shown, actions affect memory only, real save untouched, exit returns to real character | Pass |
+| Download save (download intercepted in the test; correct filename, JSON file) | Pass |
+| Delete: dialog shown, cancel keeps data, confirm wipes and returns to Welcome | Pass |
+| Tampered save in storage → rejected, original kept as backup, warning shown | Pass |
+| Phone: no horizontal scroll; no control under 44 px tall | Pass |
+| No console errors across all screens | Pass (after fixing the bugs below) |
+
+Bugs found and fixed during testing: step-heading focus lost after the animated step change; pages
+opened mid-scroll after navigation; a scroll-reset effect crashed the shell (it returned a value that
+React treated as a cleanup function); detailed attribute tiles cramped at mid widths; export filename
+used the UTC date; save warnings not shown on the Welcome screen.
+
+Not covered yet: real iOS Safari and Android devices (Phase 8); a full screen-reader pass.
 
 ### 2026-11-13 — Phase 0 verification on a real machine
 Windows 11, Node 24.21.0, npm 11.19.0.
