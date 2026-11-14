@@ -1,6 +1,39 @@
-# The Ascendant — Database Schema (proposed)
+# The Ascendant — Database Schema
 
-Status: **Approved by the product owner 2026-11-13; implemented as migrations in Phase 2–5.** Nothing below exists in a database yet.
+Status: **Approved by the product owner 2026-11-13.** Phase 2 tables are written as migrations and
+tested offline (see "Implemented in Phase 2" below); not yet applied to a live Supabase project.
+The remaining tables are planned for Phases 3–5.
+
+## Implemented in Phase 2
+
+Migrations: `supabase/migrations/20261114000100_core_schema.sql` (tables, triggers, functions,
+permissions, RLS) and `20261114000200_content_seed.sql` (content rows, which must match `src/content`
+— enforced by `supabase/tests/content-sync.test.ts`).
+
+**Content (readable by everyone, writable by no player):** `races`, `classes`, `backgrounds`,
+`tinctures`, `items`, `background_starting_items`, `achievements`, `campaign_templates`
+(`owner_user_id` null = authored; otherwise private to that player), `campaign_sub_skills`
+(one per attribute per template), `competency_definitions` (id `<template>/<key>`, attribute must be
+one of the template's sub-skills).
+
+**Player data (each player sees only their own rows):**
+
+| Table | Players may write | Engine/database-owned |
+|---|---|---|
+| `profiles` | `display_name`, `settings` | created on sign-up |
+| `characters` | insert: name, race, class, background, crest, appearance, ideals, bonds, motivation; update: name, crest, appearance, ideals, bonds, motivation | `strength`…`charisma` (1–20, start 1), `total_xp`; one per player |
+| `campaigns` | insert: `template_id`; update: `status` (active/paused only), `last_played_at` | `campaign_xp`, `curriculum_version`, completion; unique per template |
+| `competency_progress` | — | `mastery_stage` (1–6); created for every competency when a campaign starts |
+| `xp_transactions` | — | append-only ledger; unique `(user_id, idempotency_key)`; `kind` limited to the engine's XP kinds |
+| `player_achievements` | — | granted by triggers |
+| `character_items` | — | starting gear from background; later rewards |
+
+**Functions:** `apply_xp_award(...)` — server role only; writes one ledger row and updates the
+character/campaign totals only if the row was new; refuses another player's campaign.
+`delete_my_progress()` — signed-in player; deletes only their own character, campaigns and progress.
+
+Differences from the proposal below: attributes are six named columns rather than abbreviations;
+`level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
 Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 

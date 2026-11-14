@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Phase 2 Milestone A
+- Database schema, security rules and content seed as Supabase migrations (tested offline).
+- XP ledger that refuses duplicate awards and keeps campaign XP separate.
+- Attribute growth rule: scores rise only from demonstrated competency mastery.
+- History pilot: six sub-skills (one per attribute) and ten competencies, shown on the Campaigns screen.
+- First achievements and background starting gear, granted by the database.
+
 ## 0.1.0 — 2026-11-13 — Phase 1: application foundation
 - App shell with desktop sidebar and mobile bottom navigation; per-page code-splitting.
 - Screens: welcome, character creation (7 steps), dashboard, character sheet, campaigns, settings.

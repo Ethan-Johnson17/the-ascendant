@@ -98,6 +98,34 @@ These mappings must be explicitly defined in each campaign's competency framewor
 - The exact growth formula (how much mastery evidence raises a score, and the maximum score) is a
   configurable engine rule to be defined in Phase 2–3 and approved by the product owner.
 
+## Attribute sub-skills and growth (product owner decision, 2026-11-14)
+
+- Every subject (campaign) defines **six sub-skills, one per attribute**. Each competency in the
+  campaign belongs to exactly one sub-skill, and therefore to exactly one attribute.
+- Attributes are shared across subjects: Intelligence earned in History and in Economics adds together.
+- **Default growth rule (tunable configuration):** each competency earns points by mastery stage
+  (Novice 0, Apprentice 1, Competent 2, Proficient 3, Advanced 4, Expert 5). An attribute's score is
+  1 + ⌊points from all competencies tied to it ÷ 3⌋, capped at 20.
+
+History pilot sub-skills (Ancient Mesopotamia):
+
+| Attribute | Sub-skill | Pilot competencies |
+|---|---|---|
+| STR | Power and conflict | Political organization, military development, law and institutions |
+| DEX | Working with evidence | Historical source analysis |
+| CON | Time and continuity | Historical chronology |
+| INT | Societies and economies | Geography and environment, agriculture and settlement, economics and trade |
+| WIS | Applying history | Cause-and-effect reasoning |
+| CHA | Culture and belief | Religion and culture |
+
+## Accounts (product owner decision, 2026-11-14)
+
+- An account is required to play. On first sign-in, a character previously saved in the browser can
+  be brought into the account. The sample adventurer preview works without an account.
+- Sign-in uses **Supabase Auth with email and password**. Google sign-in may be added later.
+  Before outside beta testers join, a free email-delivery service is connected so confirmation and
+  password-reset emails arrive reliably (Supabase's built-in email is for testing only).
+
 ## Race, class and background effects (product owner decision, 2026-11-13)
 
 Rule: these choices shape boss-encounter tactics and story only. They never change XP rates, mastery,

@@ -1,5 +1,36 @@
 # Development Log
 
+## 2026-11-14 — Phase 2 Milestone A: database, rules and tests
+
+**Product owner decisions:** schema approved for build; each attribute maps to one sub-skill of the
+subject; accounts use Supabase Auth (email + password; Google later) — chosen over Auth0 because it
+plugs straight into the database's per-user security rules. All recorded in `GAME_DESIGN.md`.
+
+**Built:** two migrations (`supabase/migrations/`) — core schema with RLS, triggers and functions,
+then the content seed. Engine modules for attribute growth and XP award planning. History pilot
+sub-skills and competencies in `src/content`. Offline database test harness.
+
+**Architecture choices:**
+- *The database enforces Phase 2 rules itself.* Players get column-level permissions: they may
+  create a character (name, race, class, background, crest, story) and rename it, start/pause/resume
+  campaigns — nothing else. Attributes, XP, mastery and completion can't be written by players at
+  all. Triggers grant starting gear, achievements and Novice progress. This keeps Phase 2 free of
+  server functions; they arrive in Phase 3 with the first real XP sources.
+- *XP awards are a server-only function* (`apply_xp_award`, service role only). The unique
+  `(user_id, idempotency_key)` constraint makes duplicates impossible even under retries; character
+  and campaign totals update only when a new row is actually written.
+- *Revoke first, then grant narrowly.* Supabase gives the API roles broad default privileges, so the
+  migration revokes everything and grants back only what is listed.
+- *Campaign guard runs as the caller* (security invoker), so the template lookup goes through RLS and
+  a player cannot start someone else's private campaign.
+- *PGlite for offline database tests* — real Postgres in WebAssembly, one dev dependency, no Docker.
+
+**Bug caught by design review before testing:** the campaign guard was first written as security
+definer, which would have made the "is this a player?" check see the function owner instead of the
+player. Changed to security invoker.
+
+**Next:** Milestone B needs the Supabase Project URL and publishable key from the product owner.
+
 ## 2026-11-14 — Decisions confirmed
 
 - Race attribute bonuses stay dropped (may be revisited later).

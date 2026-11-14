@@ -47,7 +47,7 @@ code-splitting as part of routing.
 | Local save (validated; corrupt data set aside, never silently destroyed) | Tested |
 | Error screen if a page crashes | Implemented |
 | Sample adventurer fixture (`src/fixtures/`, labelled "Sample data" in the UI, memory-only) | Mocked — by design |
-| **Storage is this browser only** | Partial — Supabase accounts replace it in Phase 2 |
+| **Storage is this browser only** | Partial — Supabase accounts replace it in Phase 2 Milestone B |
 | Character artwork | Placeholder — heraldic crests. Source decided 2026-11-14: free-licence first, AI stills as backup |
 | Edit character after creation | Not started |
 
@@ -55,9 +55,33 @@ Screens CLAUDE.md lists for Phase 1 but `MASTER_PROMPT.md` places later (campaig
 learning interface, boss interface) arrive with the phases that give them real data (3 and 5).
 They are not shown in navigation until they work.
 
-## Phase 2 — Character and game systems — *Not started*
-Migrations + RLS, auth, character creation persisted, races/classes/backgrounds, attributes, XP
-ledger with idempotency, leveling, competencies, achievements, equipment.
+## Phase 2 — Character and game systems — *In progress*
+
+Split into two milestones. **A** needs nothing from the product owner; **B** needs a Supabase project.
+
+### Milestone A — database, rules and tests — *Tested offline (2026-11-14)*
+
+| Item | Status |
+|---|---|
+| Decisions recorded: sub-skill per attribute, growth formula, accounts (`GAME_DESIGN.md`) | Implemented |
+| Database migrations: content tables, player tables, triggers, functions | Tested offline (PGlite) — not yet applied to a real Supabase project |
+| Row Level Security and column-level permissions on every table | Tested offline (23 database tests) |
+| Content seed (races, classes, backgrounds, crests, starting gear, achievements, History pilot outline) | Tested — a test fails if the seed and `src/content` drift apart |
+| XP ledger: duplicate awards refused, campaign XP isolated, totals = ledger sum | Tested (engine + database) |
+| Engine: attribute growth from competency mastery | Tested (unit tests) — wired to real evidence in Phase 3 |
+| Engine: XP award planning with idempotency keys | Tested (unit tests) |
+| History pilot: six sub-skills and ten competencies, each tied to an attribute | Implemented, shown on the Campaigns screen |
+| Achievements: "The Oath Is Sworn", "First Steps" (granted by the database) | Tested offline |
+| Starting gear granted from background | Tested offline |
+| "Delete my progress" (only the caller's data) | Tested offline |
+
+### Milestone B — accounts and the online app — *Not started (waiting for Supabase project details)*
+
+Sign-up, sign-in, password reset, sign-out; app reads and writes Supabase instead of browser storage;
+one-time import of a character saved in this browser; inventory screen; achievements display;
+download and delete from the database; live testing.
+
+XP is not yet *earned* through play — awards come from server functions when lessons exist (Phase 3).
 
 ## Phase 3 — Learning engine — *Not started*
 Curriculum structures, objectives, activities, assessments, evidence-based mastery, adaptive

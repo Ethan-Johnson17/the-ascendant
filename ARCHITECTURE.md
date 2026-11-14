@@ -63,7 +63,9 @@ src/
     progression/  XP config, level curves  ← exists (Phase 0)
     character/    attributes (start at 1), character creation rules  ← exists
     campaigns/    campaign lifecycle: start, pause, resume, current  ← exists
-    competency/   mastery stages, evidence rules (Phase 2–3)
+    character/attributeGrowth.ts  attribute scores derived from competency mastery  ← exists
+    progression/xpAward.ts        XP award planning + idempotency keys  ← exists
+    competency/   mastery stages, evidence rules (Phase 3)
     retention/    spaced-repetition scheduling (Phase 3)
     quests/       objective + success-condition evaluation (Phase 5)
     combat/       boss eligibility, encounter state machine, resolution (Phase 5)
@@ -76,9 +78,16 @@ src/
   hooks/        Generic hooks (media queries, reduced motion …)
   styles/       Design tokens (index.css) and motion tokens  ← exists
 supabase/
-  migrations/   Versioned SQL migrations (Phase 2)
-  functions/    Edge Functions: game actions + AI orchestration (Phase 2 / 4)
+  migrations/   Versioned SQL migrations: core schema + RLS, content seed  ← exists (Phase 2)
+  tests/        Offline database tests: PGlite + test-only Supabase stand-in  ← exists
+  functions/    Edge Functions: XP awards + game actions (Phase 3), AI orchestration (Phase 4)
 ```
+
+**Phase 2 sequencing.** Until Edge Functions exist, the database enforces the rules directly:
+column-level grants decide which fields a player may write, triggers grant starting gear,
+achievements and Novice competency progress, and RLS isolates each player's rows. The only way to
+add XP is `apply_xp_award`, callable by the server role alone; Phase 3's Edge Functions will call it
+after the engine has decided the award (`engine/progression/xpAward.ts`).
 
 Deviation from CLAUDE.md's suggested tree: CLAUDE.md lists `progression/`, `combat/` etc. under
 `features/`. I split each into **`engine/<domain>`** (rules, no UI) and **`features/<domain>`** (UI).
@@ -115,6 +124,8 @@ importable by server code. No product requirement changes.
 - Browser has only the Supabase **anon key**. Every player table has RLS: `user_id = auth.uid()`.
 - Authoritative tables (XP ledger, mastery, boss outcomes) are **read-only** to the `authenticated`
   role; only Edge Functions (service role, server-side) write them, after running the engine.
+  Players' writes are limited column by column (e.g. a character's name, never its attributes).
+  Tested offline in `supabase/tests/security.test.ts`.
 - AI provider keys exist only as Edge Function secrets.
 - Retrieved web/source text is treated as untrusted data: delimited in prompts, never executed as
   instructions, and stripped of markup before display.
@@ -145,4 +156,6 @@ importable by server code. No product requirement changes.
 | App shell, navigation, 6 screens, reusable components | Implemented, manually tested (Phase 1) |
 | Engine: character creation, campaign lifecycle | Implemented, tested |
 | Local save (validated) | Implemented, tested; replaced by Supabase in Phase 2 |
+| Database migrations, RLS, triggers, XP function | Implemented, tested offline; not yet on a live project |
+| Engine: attribute growth, XP award planning | Implemented, tested |
 | Everything else | Not started |

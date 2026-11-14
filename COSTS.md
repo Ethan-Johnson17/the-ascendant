@@ -13,6 +13,12 @@ Checked November 2026. Free tiers change often — re-check before beta launch.
 | **AI — development** | Building and testing | Free | Fixture mode needs nothing; Ollama runs on your machine | Local models are slower and weaker than hosted ones |
 | **AI — beta** | Real lessons and evaluations for testers | Free tier possible | Hosted free tiers are small and unstable; Google cut Gemini free limits sharply in Dec 2025, and free-tier requests may be used to improve Google's products | A few active testers can exhaust a free daily quota |
 
+### Login emails (Supabase Auth)
+Supabase's built-in email sender is for testing only: it sends just a handful of emails per hour
+and only reliably to the project team's addresses. Sign-up confirmations and password resets for
+beta testers need a custom SMTP provider connected in Supabase (several have free tiers of a few
+thousand emails a month). **Must be set up before beta.**
+
 ## Expected usage (rough, to be measured)
 
 A 20-minute learning session might use ~10–20 AI calls (lesson, questions, evaluations, narration).
