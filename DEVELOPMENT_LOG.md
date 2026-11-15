@@ -1,5 +1,40 @@
 # Development Log
 
+## 2026-11-14 — Phase 3 Milestone A: the learning engine
+
+**Product owner decisions:** mastery needs two passes on different days (capped at Proficient until
+applied evidence exists); a weakness clears after three correct due reviews; XP for first completion
+only, plus scheduled reviews; starter lessons written by the team with verified sources. Recorded in
+`GAME_DESIGN.md` §5.
+
+**Built:** `src/engine/learning/` (config, curriculum format and validator, marking, mastery,
+retention, Weakness Bank, difficulty, and `session.ts` which decides a whole check); the learning
+migration; `learningService.ts` (load context → engine decides → database records); the `learning`
+Edge Function; curriculum-to-SQL writer; curriculum generator interface with a labelled fixture.
+
+**Architecture choices:**
+- *Checks are issued by the server.* Starting a check records exactly which questions were given, so
+  a player can't pick easy questions or see answer keys; marking happens only on the server.
+- *One service, two runtimes.* The same `learningService.ts` runs in the Edge Function (Deno) and in
+  the offline tests (Node + PGlite). It talks to the database only through six service-role SQL
+  functions, so the test adapter and the Supabase adapter are each a few lines.
+- *Defence in depth.* The engine decides; the recording function still refuses stage jumps, XP for
+  failed checks, XP kinds a check can't earn, and re-submission. Submitted attempts can't be edited
+  even by server code.
+- *Evidence outlives content edits.* Curricula are upserted, never deleted, and player records don't
+  cascade from content.
+- *"Two different days" = at least 20 hours apart* (configurable), since the server can't know each
+  player's midnight.
+- *New XP kind `knowledge_check_passed` (15 XP)* for a first pass, so reading a lesson and proving
+  knowledge are rewarded separately.
+
+**Problems hit:** shell quoting broke a few scripted edits; edits now go through the editor or
+script files. A guard test flagged a variable named `window`; renamed.
+
+**Open:** apply the migration and deploy the Edge Function (Milestone B); confirm Supabase bundles
+the shared `src/` files the function imports (fallback: copy them into `supabase/functions/_shared`
+with a sync test).
+
 ## 2026-11-14 — Phase 2 Milestone B: accounts and the online app
 
 **Built:** Supabase project connected and migrations applied; sign-up, sign-in, forgot/reset password

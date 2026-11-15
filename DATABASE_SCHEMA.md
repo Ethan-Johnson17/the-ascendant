@@ -36,6 +36,37 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 3 Milestone A
+
+Migration `supabase/migrations/20261114000300_learning_engine.sql` (tested offline; not yet applied live).
+
+**Curriculum content (readable wherever its campaign template is visible):** `curricula` (one per
+template; origin authored / generated / fixture), `curriculum_nodes` (discipline → topic → objective),
+`learning_activities` (lessons with cited sections; checks with target stage and question count),
+`assessment_items` (players may read only id, kind, difficulty and concept — **the `definition`
+column holding the answer key is server-only**), `codex_entries`, `sources` (https only; verified or
+unverified). Citations are stored inside lesson sections and Codex entries as source ids; the
+curriculum validator guarantees every cited source exists. Content is written with upserts
+(`src/services/curriculum/curriculumSql.ts`), never deleted, and player records reference content
+without cascading, so editing a curriculum can never erase a player's evidence.
+
+**Player learning records (read own rows only; no player writes at all):**
+
+| Table | Holds |
+|---|---|
+| `assessment_attempts` | Issued questions, answers, per-question results, score, pass. Immutable once submitted (trigger). |
+| `activity_completions` | Lessons completed per campaign. |
+| `concept_progress` | Codex entry unlocked / last reviewed / times right and wrong. |
+| `weakness_records` | One per concept per campaign: open/resolved, error category, occurrences, correct due reviews, next review, recent wrong answers. Resolved records are kept. |
+
+Added columns: `campaigns.difficulty_preference` (−1/0/+1, player-writable);
+`competency_progress.review_step`, `needs_review`, `last_difficulty`. XP kinds gain
+`knowledge_check_passed`.
+
+**Service-role functions:** `learning_start_context`, `learning_create_attempt`,
+`learning_submit_context`, `learning_record_submission`, `learning_lesson_context`,
+`learning_record_lesson`. Each checks that the campaign, attempt and content belong to the player.
+
 Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 
 ## Principles

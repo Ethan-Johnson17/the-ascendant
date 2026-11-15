@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 3 Milestone A
+- Learning engine rules: curriculum checker, answer marking, evidence-based mastery, retention
+  reviews, Weakness Bank, adaptive difficulty and repeat-proof XP.
+- Database tables for curricula, the Knowledge Codex, sources, checks and the Weakness Bank, with
+  answer keys hidden from players and submitted checks made permanent.
+- Server function that issues checks, marks them and records lessons (not yet deployed).
+- New XP reward: first pass of each knowledge check.
+- Development fixture that builds a placeholder curriculum for any subject (clearly labelled).
+
 ## Unreleased — Phase 2 Milestone B
 - Accounts: sign up (with email confirmation), sign in, forgot/reset password, sign out.
 - Your character and campaigns are saved to your account instead of this browser.

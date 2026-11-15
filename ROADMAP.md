@@ -98,9 +98,33 @@ Split into two milestones. **A** needs nothing from the product owner; **B** nee
 
 XP is not yet *earned* through play — awards come from server functions when lessons exist (Phase 3).
 
-## Phase 3 — Learning engine — *Not started*
+## Phase 3 — Learning engine — *In progress (Milestone A built, not yet applied live)*
 Curriculum structures, objectives, activities, assessments, evidence-based mastery, adaptive
 difficulty, spaced repetition, Weakness Bank, Knowledge Codex.
+
+Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rules").
+
+### Milestone A — engine, database and server function (no screens)
+
+| Item | Status |
+|---|---|
+| Curriculum format (Subject → Discipline → Topic → Objective → Activity → Question) and validator | Completed, tested |
+| Marking multiple-choice, ordering and matching questions | Completed, tested |
+| Evidence-based mastery (two passes ≥ 20 h apart; capped at Proficient) | Completed, tested |
+| Retention scheduling (1, 3, 7, 14, 30, 60, 120 days) | Completed, tested |
+| Weakness Bank (three correct due reviews to clear; never deleted) | Completed, tested |
+| Adaptive difficulty and question selection | Completed, tested |
+| XP: first lesson completion, first check pass, due retention reviews only | Completed, tested |
+| Database: curricula, Codex, sources, questions (answer keys hidden), attempts (immutable), Weakness Bank | Completed, tested offline — **not yet applied to the live project** |
+| `learning` Edge Function (start check, submit check, complete lesson) | Implemented; logic tested offline through the same service code. **Not yet deployed** (no Deno locally) |
+| Curriculum generation for any subject: interface + labelled fixture | Completed, tested. **Mocked** — AI generator is Phase 4 |
+| Written answers (need AI marking) | Planned — Phase 4 |
+| Advanced/Expert mastery (need applied evidence) | Planned — Phases 4–5 |
+
+### Milestone B — content and screens — *Not started*
+Authored Mesopotamia lessons (Geography and environment; Agriculture and settlement) with verified
+sources; learning screen; campaign competency matrix; Knowledge Codex; Weakness Bank; apply the
+migration and deploy the Edge Function to the live project.
 
 ## Phase 4 — AI integration — *Not started*
 Six roles, provider abstraction, schema validation, retries, context management, citations, limits.
