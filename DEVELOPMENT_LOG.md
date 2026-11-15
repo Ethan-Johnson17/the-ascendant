@@ -1,5 +1,35 @@
 # Development Log
 
+## 2026-11-14 — Phase 3 Milestone B: Mesopotamia lessons and learning screens
+
+**Built:** authored curriculum `src/content/curricula/historyEarlyCivilizations.ts` (server-side
+only; holds answer keys) and its generated migration; campaign, lesson, check, Codex and Weakness
+Bank screens; `learningData.ts` (reads the player's view of a campaign) and `learningClient.ts`
+(calls the Edge Function, validates its replies).
+
+**Sources:** six, each opened and read on 2026-11-14 (Met Museum essays, Britannica, Jacobsen &
+Adams 1958, Powell 1985). Automated fetchers were blocked by these sites, so pages were read in the
+in-app browser and journal metadata confirmed through Crossref. Any detail not found in a source was
+cut (for example a flood calendar and an Uruk population figure).
+
+**Choices:**
+- *Content as code, published as a migration.* Lessons are typed and validated in TypeScript, then
+  `npm run content:sql` writes the SQL. A test fails if the migration is out of date, and another
+  fails if any app screen imports the curriculum file (which would ship answer keys to browsers).
+  The production bundle was searched to confirm.
+- *Locked Codex entries are searchable by title only*, so search doesn't reveal lesson content early.
+- *Phone tab bar:* six tabs (Home, Hero, Learn, Codex, Review, Settings). Inventory is reached from
+  the character sheet on phones; the desktop sidebar lists everything.
+
+**Confirmed:** Supabase's API deploy bundles the shared `src/` engine files the function imports,
+so no copy in `supabase/functions/_shared` is needed.
+
+**Live walkthrough:** see TESTING.md. One lesson and two checks were taken on the product owner's
+development account (one deliberate mistake, to exercise the Weakness Bank).
+
+**Open:** product-owner review of the lesson text; unit tests for `buildCampaignLearning`; custom
+email (SMTP) before beta.
+
 ## 2026-11-14 — Phase 3 Milestone A: the learning engine
 
 **Product owner decisions:** mastery needs two passes on different days (capped at Proficient until

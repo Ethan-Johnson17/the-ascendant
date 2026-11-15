@@ -1,0 +1,315 @@
+import { useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, ClipboardCheck, Library, RotateCcw, Sparkles, Target, X } from 'lucide-react';
+import { useGame } from '../app/GameProvider.tsx';
+import { PageHeader } from '../components/ui/PageHeader.tsx';
+import { Panel } from '../components/ui/Panel.tsx';
+import { Button, ButtonLink } from '../components/ui/Button.tsx';
+import { Notice } from '../components/ui/Notice.tsx';
+import { Badge } from '../components/ui/Badge.tsx';
+import { LearningGate, SampleNote } from '../features/learning/LearningUi.tsx';
+import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
+import { masteryStages } from '../engine/character/attributeGrowth.ts';
+import { defaultLearningConfig, difficultyNames, errorCategoryNames, type Difficulty } from '../engine/learning/config.ts';
+import type { Answer } from '../engine/learning/grading.ts';
+import type { CampaignLearning, CheckView } from '../services/learning/learningData.ts';
+import type { CheckResult, IssuedItem, StartedCheck } from '../services/learning/learningClient.ts';
+import { cn } from '../utils/cn.ts';
+
+type Phase = { name: 'intro' } | { name: 'answering'; check: StartedCheck } | { name: 'result'; check: StartedCheck; result: CheckResult; answers: Record<string, Answer> };
+
+export default function CheckPage() {
+  const { campaignId, checkKey } = useParams();
+  const { campaign, load, reload, api, isSample } = useCampaignLearning(campaignId);
+  const game = useGame();
+  const [phase, setPhase] = useState<Phase>({ name: 'intro' });
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <LearningGate load={load} onRetry={() => void reload()}>
+      {(data) => {
+        const check = [...data.activities.values()].find((a): a is CheckView => a.kind === 'assessment' && a.key === checkKey);
+        if (!check) return <Notice tone="warning" title="Check not found">This check isn’t part of the campaign.</Notice>;
+        const back = `/campaigns/${campaign!.id}`;
+
+        const start = async () => {
+          if (!api || busy) return;
+          setBusy(true);
+          setError(null);
+          const r = await api.startCheck(campaign!.id, check.id);
+          setBusy(false);
+          if (!r.ok) return setError(r.error);
+          setAnswers(Object.fromEntries(r.data.items.filter((i) => i.kind === 'ordering').map((i) => [i.key, (i as Extract<IssuedItem, { kind: 'ordering' }>).entries.map((e) => e.key)])));
+          setPhase({ name: 'answering', check: r.data });
+          window.scrollTo(0, 0);
+        };
+
+        const submit = async (started: StartedCheck) => {
+          if (!api || busy) return;
+          setBusy(true);
+          setError(null);
+          const r = await api.submitCheck(started.attemptId, answers);
+          setBusy(false);
+          if (!r.ok) return setError(r.error);
+          setPhase({ name: 'result', check: started, result: r.data, answers });
+          window.scrollTo(0, 0);
+          await Promise.all([reload(), game.reload()]);
+        };
+
+        return (
+          <div className="space-y-6">
+            <Link to={back} className="inline-flex min-h-11 items-center gap-2 text-sm text-ash hover:text-ink">
+              <ArrowLeft className="size-4" aria-hidden /> Back to campaign
+            </Link>
+            <PageHeader eyebrow={`Knowledge check · proves ${check.targetStageName}`} title={check.title} />
+            {isSample && <SampleNote />}
+            {error && <Notice tone="warning">{error}</Notice>}
+
+            {phase.name === 'intro' && <Intro check={check} data={data} canStart={!!api && campaign!.status === 'active'} paused={campaign!.status === 'paused'} busy={busy} onStart={() => void start()} />}
+
+            {phase.name === 'answering' && (
+              <form
+                className="space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submit(phase.check);
+                }}
+              >
+                <p className="text-sm text-ash">
+                  {phase.check.items.length} questions · {difficultyNames[phase.check.difficulty as Difficulty]} difficulty. Pass mark {Math.round(defaultLearningConfig.mastery.passMark * 100)}%.
+                </p>
+                {phase.check.items.map((item, i) => (
+                  <Panel key={item.key} as="section" tone="raised">
+                    <p className="text-xs uppercase tracking-wider text-gold-500">Question {i + 1}</p>
+                    <h2 className="mt-1 font-serif text-xl leading-snug text-ink">{item.prompt}</h2>
+                    <div className="mt-4">
+                      <ItemInput item={item} value={answers[item.key]} onChange={(v) => setAnswers((a) => ({ ...a, [item.key]: v }))} />
+                    </div>
+                  </Panel>
+                ))}
+                <AnsweredHint items={phase.check.items} answers={answers} />
+                <Button type="submit" size="lg" disabled={busy || !allAnswered(phase.check.items, answers)} icon={<Check className="size-5" aria-hidden />}>
+                  {busy ? 'Marking…' : 'Submit answers'}
+                </Button>
+              </form>
+            )}
+
+            {phase.name === 'result' && (
+              <Result
+                data={data}
+                started={phase.check}
+                result={phase.result}
+                answers={phase.answers}
+                campaignId={campaign!.id}
+                onRetry={() => {
+                  setPhase({ name: 'intro' });
+                  setAnswers({});
+                }}
+              />
+            )}
+          </div>
+        );
+      }}
+    </LearningGate>
+  );
+}
+
+function allAnswered(items: readonly IssuedItem[], answers: Record<string, Answer>) {
+  return items.every((i) => {
+    const a = answers[i.key];
+    if (i.kind === 'single_choice') return typeof a === 'string';
+    if (i.kind === 'ordering') return Array.isArray(a);
+    return !!a && typeof a === 'object' && !Array.isArray(a) && i.left.every((l) => (a as Record<string, string>)[l.key]);
+  });
+}
+
+function AnsweredHint({ items, answers }: { items: readonly IssuedItem[]; answers: Record<string, Answer> }) {
+  const left = items.filter((i) => !allAnswered([i], answers)).length;
+  return left > 0 ? <p className="text-sm text-ash" aria-live="polite">{left} question{left > 1 ? 's' : ''} still to answer.</p> : null;
+}
+
+function Intro({ check, data, canStart, paused, busy, onStart }: { check: CheckView; data: CampaignLearning; canStart: boolean; paused: boolean; busy: boolean; onStart: () => void }) {
+  const comps = data.competencies.filter((c) => check.competencyIds.includes(c.id));
+  return (
+    <Panel tone="accent">
+      <ul className="space-y-2 text-ink">
+        <li>{check.questionCount} questions, chosen for you by the game.</li>
+        <li>Score {Math.round(defaultLearningConfig.mastery.passMark * 100)}% or more to pass.</li>
+        <li>
+          Passing on {defaultLearningConfig.mastery.passesRequired} different days (at least {defaultLearningConfig.mastery.minHoursBetweenPasses} hours apart) raises{' '}
+          {comps.map((c) => c.name).join(' and ')} to <strong className="text-gold-200">{check.targetStageName}</strong>.
+        </li>
+        <li>XP is paid the first time you pass. Mistakes go to your Weakness Bank for review; they never cost you progress.</li>
+      </ul>
+      {check.passes > 0 && <p className="mt-3 text-sm text-ash">You’ve passed this check {check.passes}× (best {Math.round((check.bestScore ?? 0) * 100)}%).</p>}
+      {!check.unlocked && <Notice tone="warning" className="mt-4">This check is locked. Reach {masteryStages[check.targetStage - 2]} first.</Notice>}
+      {paused && <Notice tone="warning" className="mt-4">This campaign is paused. Resume it to take checks.</Notice>}
+      <div className="mt-5">
+        {canStart && check.unlocked && (
+          <Button size="lg" disabled={busy} onClick={onStart} icon={<ClipboardCheck className="size-5" aria-hidden />}>
+            {busy ? 'Preparing…' : 'Begin check'}
+          </Button>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function ItemInput({ item, value, onChange }: { item: IssuedItem; value: Answer | undefined; onChange: (v: Answer) => void }) {
+  if (item.kind === 'single_choice') {
+    return (
+      <div role="radiogroup" aria-label="Choose one answer" className="grid gap-2">
+        {item.options.map((o) => {
+          const selected = value === o.key;
+          return (
+            <button
+              key={o.key}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(o.key)}
+              className={cn('flex min-h-12 items-center gap-3 rounded-control border px-4 py-2 text-left transition-colors', selected ? 'border-gold-400 bg-gold-600/20 text-gold-100' : 'border-iron bg-obsidian text-ink hover:border-gold-600')}
+            >
+              <span className={cn('size-4 shrink-0 rounded-full border-2', selected ? 'border-gold-300 bg-gold-300' : 'border-smoke')} aria-hidden />
+              {o.text}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+  if (item.kind === 'ordering') {
+    const order = Array.isArray(value) ? value : item.entries.map((e) => e.key);
+    const text = new Map(item.entries.map((e) => [e.key, e.text] as const));
+    const move = (i: number, d: -1 | 1) => {
+      const next = [...order];
+      const j = i + d;
+      if (j < 0 || j >= next.length) return;
+      [next[i], next[j]] = [next[j]!, next[i]!];
+      onChange(next);
+    };
+    return (
+      <ol className="space-y-2" aria-label="Put in order, earliest first">
+        {order.map((k, i) => (
+          <li key={k} className="flex items-center gap-2 rounded-control border border-iron bg-obsidian px-3 py-2">
+            <span className="w-6 text-center font-display text-gold-300">{i + 1}</span>
+            <span className="flex-1 text-ink">{text.get(k)}</span>
+            <Button variant="ghost" className="px-3" aria-label={`Move “${text.get(k)}” up`} disabled={i === 0} onClick={() => move(i, -1)}>
+              <ArrowUp className="size-4" aria-hidden />
+            </Button>
+            <Button variant="ghost" className="px-3" aria-label={`Move “${text.get(k)}” down`} disabled={i === order.length - 1} onClick={() => move(i, 1)}>
+              <ArrowDown className="size-4" aria-hidden />
+            </Button>
+          </li>
+        ))}
+      </ol>
+    );
+  }
+  const pairs = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, string>) : {};
+  return (
+    <div className="space-y-3">
+      {item.left.map((l) => (
+        <label key={l.key} className="grid gap-1.5 sm:grid-cols-[1fr_1.4fr] sm:items-center sm:gap-3">
+          <span className="text-ink">{l.text}</span>
+          <select
+            value={pairs[l.key] ?? ''}
+            onChange={(e) => onChange({ ...pairs, [l.key]: e.target.value })}
+            className="min-h-11 rounded-control border border-iron bg-obsidian px-3 text-ink focus-visible:outline-2 focus-visible:outline-gold-300"
+          >
+            <option value="" disabled>Choose a match…</option>
+            {item.right.map((r) => <option key={r.key} value={r.key}>{r.text}</option>)}
+          </select>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/** Shows an answer (the player's or the correct one) in words. */
+function describeAnswer(item: IssuedItem, a: Answer | null | undefined): string {
+  if (a === null || a === undefined) return 'No answer';
+  if (item.kind === 'single_choice') return item.options.find((o) => o.key === a)?.text ?? 'No answer';
+  if (item.kind === 'ordering') {
+    const text = new Map(item.entries.map((e) => [e.key, e.text] as const));
+    return Array.isArray(a) ? a.map((k, i) => `${i + 1}. ${text.get(k) ?? k}`).join('  ') : 'No answer';
+  }
+  const right = new Map(item.right.map((e) => [e.key, e.text] as const));
+  const pairs = typeof a === 'object' && !Array.isArray(a) ? a : {};
+  return item.left.map((l) => `${l.text} → ${right.get(pairs[l.key] ?? '') ?? '?'}`).join(';  ');
+}
+
+function Result({ data, started, result, answers, campaignId, onRetry }: { data: CampaignLearning; started: StartedCheck; result: CheckResult; answers: Record<string, Answer>; campaignId: string; onRetry: () => void }) {
+  const items = new Map(started.items.map((i) => [i.key, i] as const));
+  const compName = (id: string) => data.competencies.find((c) => c.id === id)?.name ?? id;
+  const conceptName = (id: string) => data.codex.find((c) => c.id === id)?.title ?? id;
+  const opened = result.weaknesses.filter((w) => w.event === 'opened' || w.event === 'reopened' || w.event === 'mistake_repeated');
+  const cleared = result.weaknesses.filter((w) => w.event === 'resolved');
+  const counted = result.weaknesses.filter((w) => w.event === 'review_counted');
+
+  return (
+    <div className="space-y-6" aria-live="polite">
+      <Panel tone="accent">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge tone={result.passed ? 'vital' : 'warning'}>{result.passed ? 'Passed' : 'Not yet'}</Badge>
+          {result.xp.total > 0 && <Badge tone="gold"><Sparkles className="size-3" aria-hidden />+{result.xp.total} XP</Badge>}
+        </div>
+        <p className="mt-3 font-display text-4xl font-semibold text-gold-100">{result.correct} / {result.total}</p>
+        <p className="text-ash">{Math.round(result.score * 100)}% · pass mark {Math.round(defaultLearningConfig.mastery.passMark * 100)}%</p>
+        <ul className="mt-4 space-y-1.5 text-ink">
+          {result.competencies.map((c) => (
+            <li key={c.competencyId}>
+              {c.advanced ? (
+                <strong className="text-gold-200">{compName(c.competencyId)} rose to {masteryStages[c.stage - 1]}!</strong>
+              ) : (
+                <span>
+                  {compName(c.competencyId)}: {masteryStages[c.stage - 1]}.{' '}
+                  {c.progress.reason ?? (c.stage >= defaultLearningConfig.mastery.maxStageFromChecks ? 'Higher stages need applied work, coming in later phases.' : '')}
+                </span>
+              )}
+              {c.reviewedWhileDue && <span className="text-ash"> Review completed on time.</span>}
+            </li>
+          ))}
+          {result.passed && result.xp.total === 0 && <li className="text-ash">No XP this time: XP is paid for the first pass, and for reviews when they are due.</li>}
+          {!result.passed && <li className="text-ash">No progress lost. Review the explanations below and try again.</li>}
+        </ul>
+        {(opened.length > 0 || counted.length > 0 || cleared.length > 0) && (
+          <div className="mt-4 rounded-control border border-iron bg-obsidian/60 p-3 text-sm">
+            <p className="flex items-center gap-2 font-medium text-gold-200"><Target className="size-4" aria-hidden />Weakness Bank</p>
+            {opened.length > 0 && <p className="mt-1 text-ash">Added for review: {opened.map((w) => conceptName(w.conceptId)).join(', ')}.</p>}
+            {counted.length > 0 && <p className="mt-1 text-ash">Review counted: {counted.map((w) => conceptName(w.conceptId)).join(', ')}.</p>}
+            {cleared.length > 0 && <p className="mt-1 text-vital">Cleared: {cleared.map((w) => conceptName(w.conceptId)).join(', ')}.</p>}
+          </div>
+        )}
+      </Panel>
+
+      <section aria-labelledby="review-answers" className="space-y-3">
+        <h2 id="review-answers" className="font-display text-xl font-semibold text-gold-200">Your answers</h2>
+        {result.results.map((r, i) => {
+          const item = items.get(r.itemId);
+          if (!item) return null;
+          return (
+            <Panel key={r.itemId} as="article" tone="raised" className={cn(r.correct ? 'border-vital/40' : 'border-warning/40')}>
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wider">
+                {r.correct ? <Check className="size-4 text-vital" aria-hidden /> : <X className="size-4 text-warning" aria-hidden />}
+                <span className={r.correct ? 'text-vital' : 'text-warning'}>Question {i + 1}: {r.correct ? 'correct' : 'not quite'}</span>
+                {!r.correct && r.errorCategory && <span className="text-smoke">· {errorCategoryNames[r.errorCategory]}</span>}
+              </p>
+              <p className="mt-1 font-serif text-lg text-ink">{item.prompt}</p>
+              {!r.correct && <p className="mt-2 text-sm text-ash">Your answer: {describeAnswer(item, answers[r.itemId])}</p>}
+              <p className="mt-1 text-sm text-gold-200">Answer: {describeAnswer(item, r.answer)}</p>
+              <p className="mt-2 text-sm text-ink/90">{r.explanation}</p>
+            </Panel>
+          );
+        })}
+      </section>
+
+      <div className="flex flex-wrap gap-3">
+        <ButtonLink to={`/campaigns/${campaignId}`} size="lg" icon={<ArrowLeft className="size-5" aria-hidden />}>Back to campaign</ButtonLink>
+        <Button size="lg" variant="secondary" onClick={onRetry} icon={<RotateCcw className="size-5" aria-hidden />}>Take it again</Button>
+        <ButtonLink to={`/codex?campaign=${campaignId}`} size="lg" variant="ghost" icon={<Library className="size-5" aria-hidden />}>Open Codex</ButtonLink>
+      </div>
+    </div>
+  );
+}

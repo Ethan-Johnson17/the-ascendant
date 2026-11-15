@@ -5,6 +5,13 @@ import { backgrounds, classes, races, tinctures } from '../../src/content/charac
 import { campaignTemplates } from '../../src/content/campaigns/catalog.ts';
 import { achievements } from '../../src/content/achievements.ts';
 import { xpActivityKinds } from '../../src/engine/progression/config.ts';
+import { authoredCurricula, authoredCurriculaSql } from '../../src/content/curricula/index.ts';
+import { listActivities, validateCurriculum } from '../../src/engine/learning/curriculum.ts';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 /** The database seed and the app's content files must never drift apart. */
 
@@ -58,5 +65,46 @@ describe('content in the database matches src/content', () => {
     );
     const inDb = [...(def?.def ?? '').matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]).sort();
     assert.deepEqual(inDb, [...xpActivityKinds].sort());
+  });
+
+  it('authored curricula: the migration is exactly what `npm run content:sql` generates', () => {
+    const generated = authoredCurriculaSql();
+    assert.ok(generated.ok, generated.ok ? '' : generated.issues.join('\n'));
+    const file = readFileSync(join(here, '..', 'migrations', '20261114000400_history_pilot_curriculum.sql'), 'utf8').replace(/\r\n/g, '\n');
+    assert.equal(file, generated.sql, 'Run `npm run content:sql` and commit the result.');
+  });
+
+  it('authored curricula are loaded: every activity and question is in the database', async () => {
+    for (const input of authoredCurricula) {
+      const v = validateCurriculum(input);
+      assert.ok(v.ok);
+      const acts = listActivities(v.curriculum);
+      const [db] = await rows<{ a: number; q: number }>(
+        `select (select count(*)::int from public.learning_activities where template_id = '${input.templateId}') as a,
+                (select count(*)::int from public.assessment_items i join public.learning_activities la on la.id = i.activity_id where la.template_id = '${input.templateId}') as q`,
+      );
+      assert.equal(db!.a, acts.length);
+      assert.equal(db!.q, acts.reduce((n, { activity }) => n + (activity.kind === 'assessment' ? activity.items.length : 0), 0));
+    }
+  });
+});
+
+describe('answer keys stay out of the app', () => {
+  it('no screen, layout or app file imports the server-side curricula', () => {
+    const src = join(here, '..', '..', 'src');
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (/\.(ts|tsx)$/.test(name) && !/\.test\.ts$/.test(name)) {
+          const rel = relative(src, path).replace(/\\/g, '/');
+          if (rel.startsWith('content/curricula/')) continue;
+          if (/content\/curricula/.test(readFileSync(path, 'utf8'))) offenders.push(rel);
+        }
+      }
+    };
+    walk(src);
+    assert.deepEqual(offenders, []);
   });
 });

@@ -167,7 +167,7 @@ importable by server code. No product requirement changes.
 | Toolchain config (Vite, TS, Tailwind v4, scripts) | Tested on Windows / Node 24 (2026-11-13) |
 | Design tokens | Implemented |
 | Environment validation | Implemented, tested |
-| Supabase client + connection check | Implemented, untested against a live project |
+| Supabase client + connection check | Implemented, tested live |
 | Engine: progression config + level curve | Implemented, tested |
 | App shell, navigation, 6 screens, reusable components | Implemented, manually tested (Phase 1) |
 | Engine: character creation, campaign lifecycle | Implemented, tested |
@@ -176,7 +176,9 @@ importable by server code. No product requirement changes.
 | Database migrations, RLS, triggers, XP function | Implemented, tested offline and applied live |
 | Engine: attribute growth, XP award planning | Implemented, tested |
 | Engine: learning rules (curriculum, marking, mastery, retention, weaknesses, difficulty) | Implemented, tested (Phase 3 A) |
-| Learning database tables and service-role functions | Implemented, tested offline; not yet applied live |
-| `learning` Edge Function | Implemented; logic tested offline; not yet deployed |
+| Learning database tables and service-role functions | Implemented, tested offline and applied live |
+| `learning` Edge Function | Deployed; tested live (lesson, check, retake) |
+| Authored curriculum (`src/content/curricula/`, server-side only) → generated migration | Implemented, tested; Mesopotamia geography + agriculture |
+| Learning screens: campaign, lesson, check, Knowledge Codex, Weakness Bank | Implemented, tested live (Phase 3 B) |
 | Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4) |
 | Everything else | Not started |

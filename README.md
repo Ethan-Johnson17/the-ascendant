@@ -41,7 +41,10 @@ The app needs a Supabase project to sign in — see below.
    - `npx supabase link --project-ref <project-ref>`
    - `npx supabase db push --remote` — **`--remote` is required** with Supabase CLI 3, which otherwise
      targets a local database. Add `--yes` if the Yes/No prompt doesn't respond to arrow keys.
-6. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
+6. Deploy the server function that marks checks and records lessons:
+   `npx supabase functions deploy learning --use-api --yes`. (`--use-api` builds it on Supabase's
+   servers, so Docker isn't needed. Supabase supplies the function's server key itself; nothing to paste.)
+7. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
 
 Never paste the secret (`sb_secret_…`) or `service_role` key, or any AI provider key, into `.env.local`.
 The app refuses a secret key if one is pasted by mistake.
@@ -57,6 +60,7 @@ inviting beta testers (see `COSTS.md`).
 | `npm test` | Run automated tests |
 | `npm run typecheck` | Check all code for type errors |
 | `npm run build` | Build the production version into `dist/` |
+| `npm run content:sql` | After editing lessons in `src/content/curricula/`, rewrite their migration (then bump the curriculum version and `db push`) |
 
 ## Documents
 

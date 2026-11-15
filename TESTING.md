@@ -39,6 +39,29 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-14 — Phase 3 Milestone B (live Supabase project)
+Automated: **135 tests, 135 passing**; typecheck clean; build clean. New: the content migration
+matches the authored curriculum; every lesson and question is in the database; no app screen
+imports the curriculum file. The production bundle was searched for curriculum identifiers: none found.
+
+Live walkthrough in the in-app browser, signed in as the product owner's development account:
+
+| Journey | Result |
+|---|---|
+| Dashboard → Continue learning → campaign page: 4 lessons, 5 checks, later checks locked, matrix shows 2 competencies with lessons | Pass |
+| Read "The land between the rivers" → Complete lesson → +10 XP; four Codex entries unlocked | Pass |
+| Start check: only questions and options reach the browser (no answers) | Pass |
+| Submit 4/5 → Passed, +15 XP, "1 of 2 separate days", missed idea added to the Weakness Bank, explanations shown | Pass |
+| Same-day retake: the weak concept is asked again; 5/5 → no XP, still 1 of 2 days, early practice not counted as a review | Pass |
+| Weakness Bank: entry shows category, 0/3 reviews, next review date, "Practise early" link | Pass |
+| Codex: entries in lesson order, statuses (learned / practised / needs review / not yet learned), expand shows explanation and references | Pass |
+| Phone width (375 px): six-tab bar fits after shortening labels; no sideways scroll | Pass |
+| Every Supabase request on the campaign page returns 200 | Pass |
+
+Not covered yet: a pass on a second day (needs 20 hours); clearing a weakness on live (needs due
+dates; tested offline); ordering and matching questions in the browser (5 of the 35 questions; none
+was picked in these two checks); retention reviews coming due; real phones.
+
 ### 2026-11-14 — Phase 3 Milestone A (offline)
 Automated: **132 tests, 132 passing**; typecheck clean; build clean.
 

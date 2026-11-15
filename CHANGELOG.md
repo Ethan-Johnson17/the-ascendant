@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 3 Milestone B
+- First real lessons: Ancient Mesopotamia geography and agriculture (4 lessons, 5 knowledge
+  checks, 15 Codex entries), each fact tied to a checked source and labelled by certainty.
+- Campaign page with your learning path, competency matrix and a difficulty nudge.
+- Lesson, knowledge check, Knowledge Codex and Weakness Bank screens.
+- Navigation: Codex and Weakness Bank added; on phones Inventory moved to the character sheet.
+- The learning database changes and server function are now live.
+
 ## Unreleased — Phase 3 Milestone A
 - Learning engine rules: curriculum checker, answer marking, evidence-based mastery, retention
   reviews, Weakness Bank, adaptive difficulty and repeat-proof XP.
