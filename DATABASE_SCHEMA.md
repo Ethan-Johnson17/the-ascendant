@@ -36,6 +36,23 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 4 Milestone C part 2
+
+Migration `supabase/migrations/20261116000500_generated_subjects.sql` (tested offline; applied live):
+- `ai_requests.role` may now be `course_builder`.
+- `generated_subjects`: one row per AI-made course (template id, owner, campaign, description,
+  advice area, the player's request, the outline with each lesson's article and build state,
+  `closed_at`). Players read their own; no player writes.
+- `content_reports`: a player's report of a mistake in a lesson (5–1000 characters, one per player
+  per lesson). Players may add one only for a lesson in their own campaign, and read their own.
+- AI-made courses reuse the normal content tables (template with an owner, sub-skills,
+  competencies, curriculum version 1, sources, nodes) and a normal campaign.
+- Service-role functions: `ai_subject_slots`, `ai_create_subject` (locks per player, enforces the
+  open-subject limit, checks shape and ids), `ai_course_context`, `ai_save_lesson` (lessons in order;
+  records the article revision).
+- Player function `close_generated_subject`: closes a subject and pauses its campaign. **There is
+  no delete**: deleting would also delete the XP records, and earned progress is permanent.
+
 ## Implemented in Phase 4 Milestone C part 1
 
 Migration `supabase/migrations/20261116000400_research.sql` (tested offline; applied live):

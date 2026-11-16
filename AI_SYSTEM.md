@@ -1,9 +1,9 @@
 # The Ascendant — AI System
 
-Status: **Phase 4 Milestones A and B built; Milestone C part 1 built.** The provider layer, limits,
-usage log, the Tutor, the Examiner, the Progression Advisor and the Researcher are implemented and
-tested, and run live with Groq (`openai/gpt-oss-120b`). Settings are read on every request, so
-changing a secret needs no redeploy. AI curricula (C2) and Game Master / Strategist formats (C3): not
+Status: **Phase 4 Milestones A and B built; Milestone C parts 1 and 2 built.** The provider layer,
+limits, usage log, the Tutor, the Examiner, the Progression Advisor, the Researcher and the Course
+Builder are implemented and tested, and run live with Groq (`openai/gpt-oss-120b`). Settings are read
+on every request, so changing a secret needs no redeploy. Game Master / Strategist formats (C3): not
 started.
 
 ## Current setup (Milestone A)
@@ -103,6 +103,46 @@ First live results (2026-11-16, three searches): the AI invented web addresses, 
 title; every one was caught. With books and articles preferred in the prompt, a real book (Kramer,
 *The Sumerians*) was confirmed and shown. Expect many searches to show little or nothing.
 
+### Course Builder (Milestone C part 2)
+"Start a new subject" on the Campaigns screen. The player gives a subject, a goal and a level.
+
+1. **Topic check (no AI).** `src/services/subjects/topicGuard.ts` refuses clearly harmful requests
+   (making weapons, drugs or malware; self-harm methods; sexual content; hate). Serious subjects that
+   only mention hard topics are allowed. Health, law and money courses are marked "for learning, not
+   personal advice". A refusal uses no AI request.
+2. **Slots.** At most 3 open AI subjects per player (`config.courseBuilder.maxOpenSubjects`).
+3. **Outline (1 request).** Title, description, 6 sub-skills, 2–3 competencies (each mapped to an
+   attribute) and exactly 4 lessons, each with a suggested Wikipedia article. The player's words sit
+   inside `<request>` delimiters and are treated as data.
+4. **Articles (no AI).** For each lesson the server looks up the suggested article on English
+   Wikipedia (MediaWiki API through `safeFetch`; redirects followed; missing and disambiguation pages
+   rejected), falling back to a search. No article → the course is refused before saving.
+5. **Each lesson, built when the player reaches it (2 requests).** The server fetches the article text
+   (up to 9,000 characters, reference sections removed) and asks for 3–5 sections, each of 2–3
+   paragraphs in the AI's own words plus one **word-for-word quote** from the article, and 2–4 Codex
+   concepts, each with a quote. Our code drops any section or concept whose quote is not in the
+   article (`quoteIndex`, whole words, at least 15 characters) and any section that only repeats its
+   quote. Then a second request writes 3–5 multiple-choice questions and one written question; each
+   question carries a `support` quote that must appear in the lesson text, and broken questions are
+   dropped (duplicate options, "all of the above", answers out of range).
+6. **Engine and database decide.** Keys are made by our code, not the AI. The lesson is turned into a
+   normal curriculum and must pass `validateCurriculum`; the engine sets the check's target stage
+   (lessons 1–2 → Apprentice, 3–4 → Practitioner). A service-role function saves it, checking ids and
+   order. After that it is an ordinary lesson: same XP, mastery and Codex rules.
+
+Lessons must be built in order; the previous lesson must be completed first. Building needs 2 free
+requests from the player's 30 a day. If too little survives the checks, nothing is saved and the
+player can try again.
+
+Labels: every AI-made lesson shows "AI-generated, not reviewed by a person", its quoted source line,
+"Wikipedia, an encyclopedia, not an academic or primary source" and the CC BY-SA notice. Fixture
+courses say "Development fixture". "Report a mistake" saves the report and flags the lesson.
+
+Known limits: the quote check proves the evidence is real, not that the AI's paraphrase is right, and
+answer keys come from the AI (backed only by the support quote). Competency mapping can be odd. A
+lesson can't be rebuilt yet. Groq's 8,000 tokens-per-minute limit means two players building at once
+may have to wait.
+
 ### Repair reasons
 When a reply fails its format check and gets its one repair attempt, `ai_requests.repair_reason`
 records why, as field paths and check codes only (for example `sources.0.why: too_small`, `not_json`,
@@ -110,7 +150,7 @@ records why, as field paths and check codes only (for example `sources.0.why: to
 
 ## Roles
 
-Six roles with separate interfaces, prompts and output schemas. They may share one model at first.
+Seven roles with separate interfaces, prompts and output schemas. They may share one model at first.
 
 | Role | Input | Output (schema-validated) | May it change game state? |
 |---|---|---|---|
@@ -120,6 +160,7 @@ Six roles with separate interfaces, prompts and output schemas. They may share o
 | Strategist | Curriculum, mastery, weaknesses | Scenario / boss phase drafts | No — drafts validated against content schema |
 | Researcher | Concept title and summary | Candidate books, articles and pages | No — our code checks every suggestion; unconfirmed ones are never shown |
 | Progression Advisor | Progress, review schedule | Ranked recommendations | No |
+| Course Builder | Player's subject and goal; fetched article text | Outline; lesson sections and concepts with quotes; check questions | No — quotes checked by our code, lessons validated by the engine and saved by a server function |
 
 ## Provider abstraction
 
@@ -162,8 +203,8 @@ model than Game Master without code changes. Providers planned:
   books against Open Library, articles against Crossref, web pages for a trusted publisher, a
   loading page, a matching title and on-topic text. Unverified sources are never shown. Verified ones
   are further reading only, not lesson citations. (The plan said the page must contain a quoted
-  claim; the Researcher can't browse, so it has no real quotes to give. That check returns in C2,
-  where lessons are built from fetched page text.)
+  claim; the Researcher can't browse, so it has no real quotes to give. That check arrived in C2:
+  AI-made lessons quote the fetched article word for word, and our code checks every quote.)
 - Every lesson claim carries a strength label: established fact, scholarly consensus, competing
   interpretations, disputed, speculation.
 - Retrieved text is untrusted: wrapped in delimiters, instructions inside it are ignored.
@@ -172,7 +213,8 @@ model than Game Master without code changes. Providers planned:
 
 `src/services/curriculum/generator.ts` defines `CurriculumGenerator.propose(request, templateId)`.
 `generateCurriculum` validates the learner's request, calls the generator, and accepts the result only
-if `validateCurriculum` passes (shape, references, answerable answer keys, cited lessons). Phase 4 adds
-an AI-backed generator behind this interface. Today the only implementation is the development
+if `validateCurriculum` passes (shape, references, answerable answer keys, cited lessons). AI-made subjects (C2)
+don't use this interface: they are built one lesson at a time by the Course Builder (above), and each
+lesson goes through the same `validateCurriculum`. Today the only implementation is the development
 fixture (`src/fixtures/fixtureCurriculumGenerator.ts`), which is marked `origin: 'fixture'` and whose
 text says it is placeholder material.

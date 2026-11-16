@@ -10,6 +10,9 @@ import { buildResearcherMessages, researchContextSchema, researcherReplySchema, 
 import { createCatalogues } from '../research/catalogues.ts';
 import type { FetchLike } from '../research/safeFetch.ts';
 import { verifySource } from '../research/verify.ts';
+import { courseRequestSchema } from './roles/courseBuilder.ts';
+import { createSubjectService } from '../subjects/subjectService.ts';
+import { createWikipedia } from '../subjects/wikipedia.ts';
 
 /**
  * The server side of AI features: what the `ai` Edge Function runs for each request.
@@ -46,6 +49,8 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
     campaignId: z.uuid(),
     conceptId: z.string().min(1).max(200),
   }),
+  z.object({ action: z.literal('create_subject'), request: courseRequestSchema }),
+  z.object({ action: z.literal('build_lesson'), templateId: z.string().regex(/^ai-[a-z0-9]{6,40}$/) }),
   z.object({ action: z.literal('usage') }),
 ]);
 
@@ -60,6 +65,8 @@ export interface AiServiceOptions {
   readonly sleep?: (ms: number) => Promise<void>;
   /** How the Researcher's suggestions are checked. Tests pass a fake; the default is the real web. */
   readonly research?: { readonly fetch?: FetchLike; readonly timeoutMs?: number };
+  /** How the Course Builder reads Wikipedia, and how new subject ids are made. Tests pass fakes. */
+  readonly subjects?: { readonly fetch?: FetchLike; readonly timeoutMs?: number; readonly newId?: () => string };
 }
 
 /** Player-facing wording for each failure. Never claims a result the AI didn't give. */
@@ -295,6 +302,13 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
     };
   }
 
+  const subjects = createSubjectService({
+    store, provider, config, log, now,
+    wikipedia: createWikipedia(options.subjects?.fetch ?? ((input, init) => fetch(input, init)), options.subjects?.timeoutMs ?? 8000),
+    ...(options.sleep ? { sleep: options.sleep } : {}),
+    ...(options.subjects?.newId ? { newId: options.subjects.newId } : {}),
+  });
+
   async function handle(userId: string, body: unknown): Promise<AiResponse> {
     const req = aiRequestSchema.safeParse(body);
     if (!req.success) return { status: 400, body: { error: 'The request was not understood.', issues: req.error.issues.map((i) => i.message) } };
@@ -302,6 +316,8 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       if (req.data.action === 'usage') return { status: 200, body: { usage: await usage(userId), configured: provider !== null, origin: provider?.origin ?? null } };
       if (req.data.action === 'advise') return await advise(userId, req.data);
       if (req.data.action === 'research') return await research(userId, req.data);
+      if (req.data.action === 'create_subject') return await subjects.create(userId, req.data.request);
+      if (req.data.action === 'build_lesson') return await subjects.build(userId, req.data.templateId);
       return await askTutor(userId, req.data);
     } catch (err) {
       if (err instanceof z.ZodError) return { status: 500, body: { error: 'The game data came back in an unexpected shape. Please try again later.' } };

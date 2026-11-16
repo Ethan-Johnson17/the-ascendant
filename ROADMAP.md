@@ -177,7 +177,7 @@ same rules, clearly labelled; building counts against the 30-a-day allowance. Bu
 | Part | Contents | Status |
 |---|---|---|
 | C1 | Researcher ("Find further reading" on Codex entries); server-side source checks (Open Library, Crossref, trusted web pages); repair-reason logging | Completed; tested offline and live with Groq (2026-11-16) |
-| C2 | "Start a new subject": AI outline, then lessons and checks built one at a time from fetched source text; "AI-generated" labels; report-a-mistake. Decided 2026-11-16: 4 lessons, harmful topics refused (advice topics labelled), reports flag the lesson, 3 AI subjects per player | Planned |
+| C2 | "Start a new subject": AI outline, then lessons and checks built one at a time from fetched source text; "AI-generated" labels; report-a-mistake. Decided 2026-11-16: 4 lessons, harmful topics refused (advice topics labelled), reports flag the lesson, 3 AI subjects per player | Completed; tested offline and live with Groq (2026-11-16). Lessons can't be rebuilt yet |
 | C3 | Game Master and Strategist reply formats, checks and fixtures (used in Phase 5) | Not started |
 
 ## Phase 5 — Campaigns, quests, and encounters — *Not started*

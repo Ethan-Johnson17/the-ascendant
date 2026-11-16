@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 4 Milestone C part 2
+- "Start a new subject": describe any subject and goal, and the Course Builder (AI) plans a short
+  4-lesson course from Wikipedia. Each lesson and its check are written when you reach it, and every
+  section quotes the article word for word (checked automatically).
+- AI-made lessons are labelled "AI-generated, not reviewed by a person". Health, law and money courses
+  are marked "for learning, not personal advice". Harmful topics are refused.
+- "Report a mistake" on AI-made lessons.
+- Up to 3 AI subjects at a time; close one to start another (your XP stays).
+
 ## Unreleased — Phase 4 Milestone C part 1
 - "Find further reading" on Codex entries: the Researcher (AI) suggests books, articles and museum
   pages, and the server checks each one against library catalogues or the live page. Only confirmed

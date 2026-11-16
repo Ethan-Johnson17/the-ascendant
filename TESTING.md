@@ -39,6 +39,42 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-16 — Phase 4 Milestone C part 2 (Course Builder)
+Automated: **238 tests, 238 passing**; typecheck and production build clean.
+
+New unit tests (`src/services/subjects/subjects.test.ts`):
+- harmful requests refused; serious subjects that mention hard topics allowed; health, law and money
+  courses labelled;
+- quotes matched word for word (case, punctuation and spacing ignored); altered, partial-word and
+  too-short quotes rejected;
+- Wikipedia text keeps explaining sections and drops reference lists, at whole paragraphs;
+- keys made by our code and unique;
+- prompt delimiters can't be closed by the player's words, the article or the lesson;
+- lesson parts with a made-up quote, or that only repeat their quote, are dropped;
+- unsupported or broken questions are dropped and the written rubric stays passable.
+
+New database tests (`supabase/tests/subjects.test.ts`, fake Wikipedia, no network):
+- a fixture course is planned, saved as the player's own and labelled; its campaign starts;
+- harmful topics refused before any AI request; advice courses labelled;
+- three open subjects allowed, a fourth refused, and allowed again after closing one;
+- no article found → no course;
+- lessons built in order from the article and then work like any lesson (complete, check, XP);
+- a lesson whose quotes are not in the source is never saved;
+- players can't write course content or call the Course Builder functions;
+- a player can report a lesson once, and only in their own campaigns.
+
+Live (Groq, test account, 2026-11-16), subject "Volcanoes":
+- Outline: 4 lessons, each matched to a real Wikipedia article (Volcano, Plate tectonics, Volcanic
+  eruption, Volcanic hazard).
+- Lesson 1 built with every quote valid, but its sections were one sentence each, close to the
+  source. Fix: 2–3 paragraphs per section, a "teach, don't repeat" rule, and a check that drops
+  sections that only repeat their quote. Lesson 1 stays as built (no rebuild yet).
+- Lesson 1 completed: +10 XP, Codex entries unlocked.
+- Lesson 2 built after the fix: 3 sections of 2 paragraphs each in plain words, each with a valid
+  quote and a certainty label.
+- Not yet seen live: a check on an AI-made lesson, closing a subject, a mistake report, a refused
+  topic (all covered offline).
+
 ### 2026-11-16 — Phase 4 Milestone C part 1 (Researcher)
 Automated: **218 tests, 218 passing**; typecheck and production build clean.
 

@@ -10,12 +10,17 @@ import { Badge } from '../components/ui/Badge.tsx';
 import { CertaintyBadge, LearningGate, SampleNote, SourceList } from '../features/learning/LearningUi.tsx';
 import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
 import { TutorPanel } from '../features/ai/TutorPanel.tsx';
+import { useCourses } from '../features/subjects/CoursesProvider.tsx';
+import { GeneratedLabels, ReportMistake } from '../features/subjects/SubjectPanels.tsx';
 import type { CheckView, LessonView } from '../services/learning/learningData.ts';
 
 export default function LessonPage() {
   const { campaignId, lessonKey } = useParams();
   const { campaign, load, reload, api, isSample } = useCampaignLearning(campaignId);
   const game = useGame();
+  const { courseInfo } = useCourses();
+  const course = campaign ? courseInfo(campaign.templateId) : null;
+  const generated = course?.generated ?? null;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'info' | 'warning'; text: string } | null>(null);
 
@@ -56,6 +61,7 @@ export default function LessonPage() {
               subtitle={<span className="inline-flex items-center gap-2 text-base"><Clock className="size-4" aria-hidden /> About {lesson.minutes} minutes{lesson.completed && <Badge tone="vital"><Check className="size-3" aria-hidden />Completed</Badge>}</span>}
             />
             {isSample && <SampleNote />}
+            {course && generated && <GeneratedLabels course={course} />}
 
             <div className="space-y-5">
               {lesson.sections.map((s, i) => (
@@ -68,7 +74,10 @@ export default function LessonPage() {
                     {s.paragraphs.map((p, j) => <p key={j}>{p}</p>)}
                   </div>
                   {s.citations.length > 0 && (
-                    <p className="mt-3 text-xs text-smoke">Source: {s.citations.map((c) => c.source.title).join('; ')}</p>
+                    <p className="mt-3 text-xs text-smoke">
+                      Source: {s.citations.map((c) => c.source.title).join('; ')}
+                      {generated && s.citations[0]?.locator && <span className="mt-1 block italic">Quoted from the source: {s.citations[0].locator}</span>}
+                    </p>
                   )}
                 </Panel>
               ))}
@@ -77,8 +86,12 @@ export default function LessonPage() {
             <Panel eyebrow="References" title="Where this comes from">
               <SourceList citations={allCitations} title="Sources for this lesson" />
               <p className="mt-4 text-xs text-smoke">
-                Labels show how settled each part is: established fact, strong scholarly consensus, or debated. Lesson written by the development team; awaiting review.
+                Labels show how settled each part is: established fact, strong scholarly consensus, or debated.{' '}
+                {generated
+                  ? 'Written by the Course Builder (AI) from the Wikipedia article above, which is an encyclopedia, not an academic or primary source. Wikipedia text is available under CC BY-SA 4.0. Not reviewed by a person.'
+                  : 'Lesson written by the development team; awaiting review.'}
               </p>
+              {generated && <div className="mt-4"><ReportMistake activityId={lesson.id} /></div>}
             </Panel>
 
             <TutorPanel campaignId={campaign!.id} lessonId={lesson.id} sources={data.sources} isSample={isSample} />

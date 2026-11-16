@@ -1,5 +1,37 @@
 # Development Log
 
+## 2026-11-16 — Phase 4 Milestone C part 2: start a new subject
+
+**Product owner decisions:** short courses of 4 lessons; only harmful topics refused, health, law and
+money courses labelled; reports saved and the lesson flagged; 3 AI subjects at a time.
+
+**Built:**
+- server: `roles/courseBuilder.ts`; `src/services/subjects/` (`topicGuard.ts`, `quotes.ts`,
+  `wikipedia.ts`, `assemble.ts`, `subjectService.ts`); actions `create_subject` and `build_lesson`;
+- database: migration `20261116000500_generated_subjects.sql`;
+- screens: `NewSubjectPanel` on Campaigns; plan, build and close on the campaign page; labels and
+  "Report a mistake" on lessons (`src/features/subjects/`).
+
+**Choices:**
+- *Build lessons as the player goes.* An outline is one request; each lesson is two. Building all
+  four at once would use 9 requests and could hit Groq's per-minute token limit.
+- *Write from fetched text, check every quote.* The AI only sees the article our server fetched. Every
+  section, concept and question carries a word-for-word quote that our code checks; anything that
+  fails is dropped, and a lesson with too little left is not saved.
+- *Our code makes the keys and the engine sets the check level.* The AI never names database ids or
+  decides how much a check is worth.
+- *Close instead of delete (conflict found while building).* The agreed "3 at a time" rule needs a
+  way to free a slot. Deleting a course would also delete its XP records, which breaks the rule that
+  earned progress is permanent. Closing pauses the campaign and frees the slot; XP and Codex entries
+  stay. Recorded in GAME_DESIGN.md.
+- *Thin first lesson fixed.* The first live lesson was copied almost word for word in one-sentence
+  sections. The format now asks for 2–3 paragraphs per section, and our code drops a section that
+  only repeats its quote. The second live lesson taught properly.
+
+**Known limitations:** a built lesson can't be rebuilt; answer keys come from the AI and are backed
+only by the quote check; the AI's competency mapping can be odd; Wikipedia is the only source for now;
+Groq's 8,000 tokens-per-minute limit is shared by all players.
+
 ## 2026-11-16 — Phase 4 Milestone C part 1: the Researcher and source checks
 
 **Product owner decisions:** grounding from Wikipedia plus verified extra sources; AI-made subjects

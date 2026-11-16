@@ -11,7 +11,8 @@ import { Notice } from '../components/ui/Notice.tsx';
 import { LevelProgress } from '../features/progression/LevelProgress.tsx';
 import { LearningGate, SampleNote, StagePips } from '../features/learning/LearningUi.tsx';
 import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
-import { findTemplate } from '../content/campaigns/catalog.ts';
+import { useCourses } from '../features/subjects/CoursesProvider.tsx';
+import { GeneratedLabels, SubjectPlanPanel } from '../features/subjects/SubjectPanels.tsx';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { masteryStages } from '../engine/character/attributeGrowth.ts';
 import type { DifficultyPreference } from '../engine/learning/config.ts';
@@ -30,7 +31,8 @@ export default function CampaignPage() {
   const { campaignId } = useParams();
   const { campaign, load, reload, isSample } = useCampaignLearning(campaignId);
   const { resumeCampaign } = useGame();
-  const template = campaign ? findTemplate(campaign.templateId) : undefined;
+  const { courseInfo } = useCourses();
+  const template = campaign ? courseInfo(campaign.templateId) : null;
   const [resumeError, setResumeError] = useState<string | null>(null);
 
   return (
@@ -52,6 +54,7 @@ export default function CampaignPage() {
           />
 
           {isSample && <SampleNote />}
+          {template?.generated && <GeneratedLabels course={template} />}
           {campaign!.status === 'paused' && !isSample && (
             <Notice tone="warning" title="This campaign is paused">
               You can read its lessons, but resume it to take checks and earn progress.
@@ -71,8 +74,16 @@ export default function CampaignPage() {
           )}
 
           <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-            <Curriculum data={data} campaignId={campaign!.id} />
+            <Curriculum data={data} campaignId={campaign!.id} generated={!!template?.generated} />
             <div className="space-y-6">
+              {template?.generated && !isSample && (
+                <SubjectPlanPanel
+                  course={template}
+                  campaignActive={campaign!.status === 'active'}
+                  completedLessonIds={new Set([...data.activities.values()].filter((a) => a.kind === 'lesson' && a.completed).map((a) => a.id))}
+                  onBuilt={reload}
+                />
+              )}
               <Panel eyebrow="Campaign progress" title="Level">
                 <LevelProgress totalXp={campaign!.campaignXp} curve={defaultProgressionConfig.campaignLevels} label="Campaign" compact />
               </Panel>
@@ -80,18 +91,18 @@ export default function CampaignPage() {
             </div>
           </div>
 
-          <CompetencyMatrix competencies={data.competencies} />
+          <CompetencyMatrix competencies={data.competencies} noContentLabel={template?.generated ? 'No lessons yet' : 'Lessons in Phase 6'} />
         </div>
       )}
     </LearningGate>
   );
 }
 
-function Curriculum({ data, campaignId }: { data: CampaignLearning; campaignId: string }) {
-  if (!data.hasCurriculum) {
+function Curriculum({ data, campaignId, generated }: { data: CampaignLearning; campaignId: string; generated: boolean }) {
+  if (!data.hasCurriculum || (generated && data.counts.lessons === 0)) {
     return (
-      <Panel eyebrow="Curriculum" title="Lessons are being written">
-        <p className="text-ash">This campaign has no lessons yet.</p>
+      <Panel eyebrow="Curriculum" title={generated ? 'Your course is planned' : 'Lessons are being written'}>
+        <p className="text-ash">{generated ? 'No lessons are built yet. Build the first one from the course plan.' : 'This campaign has no lessons yet.'}</p>
       </Panel>
     );
   }
@@ -106,9 +117,13 @@ function Curriculum({ data, campaignId }: { data: CampaignLearning; campaignId: 
               <div key={o.id} className="mt-4">
                 <p className="text-xs uppercase tracking-wider text-smoke">Goal</p>
                 <p className="font-serif text-ink">{o.statement}</p>
-                <ul className="mt-2 space-y-2">
-                  {o.activities.map((a) => <li key={a.id}><ActivityRow activity={a} campaignId={campaignId} /></li>)}
-                </ul>
+                {o.activities.length === 0 ? (
+                  <p className="mt-2 text-sm text-smoke">Not built yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {o.activities.map((a) => <li key={a.id}><ActivityRow activity={a} campaignId={campaignId} /></li>)}
+                  </ul>
+                )}
               </div>
             ))}
           </section>
@@ -187,7 +202,7 @@ function DifficultyControl({ campaignId, value, onSaved }: { campaignId: string;
   );
 }
 
-function CompetencyMatrix({ competencies }: { competencies: readonly CompetencyView[] }) {
+function CompetencyMatrix({ competencies, noContentLabel }: { competencies: readonly CompetencyView[]; noContentLabel: string }) {
   return (
     <Panel eyebrow="Skill matrix" title="Competencies">
       <p className="mb-4 text-sm text-ash">Stages rise only with evidence: pass a stage’s check on two different days. Each competency feeds one attribute.</p>
@@ -201,7 +216,7 @@ function CompetencyMatrix({ competencies }: { competencies: readonly CompetencyV
                   <p className="font-medium text-ink">{c.name}</p>
                   <p className="text-xs text-smoke">{c.subSkill} · {c.attribute.toUpperCase()}</p>
                 </div>
-                {c.hasContent ? <Badge tone={r.tone}>{r.text}</Badge> : <Badge>Lessons in Phase 6</Badge>}
+                {c.hasContent ? <Badge tone={r.tone}>{r.text}</Badge> : <Badge>{noContentLabel}</Badge>}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <StagePips stage={c.stage} />

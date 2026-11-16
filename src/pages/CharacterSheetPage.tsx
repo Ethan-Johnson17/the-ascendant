@@ -11,11 +11,12 @@ import { LevelProgress } from '../features/progression/LevelProgress.tsx';
 import { attributeIds } from '../engine/character/attributes.ts';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { findBackground, findClass, findRace, findTincture } from '../content/character/options.ts';
-import { findTemplate } from '../content/campaigns/catalog.ts';
+import { useCourses } from '../features/subjects/CoursesProvider.tsx';
 import { achievements } from '../content/achievements.ts';
 
 export default function CharacterSheetPage() {
   const { player } = useGame();
+  const { courseInfo } = useCourses();
   const character = player.character;
   if (!character) return null;
   const race = findRace(character.raceId);
@@ -50,7 +51,7 @@ export default function CharacterSheetPage() {
               <ul className="space-y-4">
                 {player.campaigns.map((c) => (
                   <li key={c.id}>
-                    <LevelProgress totalXp={c.campaignXp} curve={defaultProgressionConfig.campaignLevels} label={findTemplate(c.templateId)?.module ?? 'Campaign'} compact />
+                    <LevelProgress totalXp={c.campaignXp} curve={defaultProgressionConfig.campaignLevels} label={courseInfo(c.templateId)?.module ?? 'Campaign'} compact />
                   </li>
                 ))}
               </ul>

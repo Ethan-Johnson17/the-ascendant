@@ -11,13 +11,19 @@ Checked November 2026. Free tiers change often — re-check before beta launch.
 | **Supabase** (Free plan) | Database, login, file storage, server functions | Free | 2 projects; 500 MB database; 1 GB file storage; 5 GB egress; 50,000 monthly active users; 500,000 Edge Function invocations/month; **projects pause after 7 days of inactivity**; no backups | Pausing during quiet weeks (restorable without data loss); no backups during beta |
 | **Hosting** (Vercel / Netlify / Cloudflare Pages free tiers) | Publishing the web app for beta testers | Free | Generous for a static app | Not before thousands of users |
 | **AI — development** | Building and testing | Free | Fixture mode needs nothing; Ollama runs on your machine | Local models are slower and weaker than hosted ones |
-| **AI — beta: Groq free plan** (chosen 2026-11-16) | Tutor, Examiner, Advisor, Researcher | Free, no card | `openai/gpt-oss-120b`: 30 requests/minute, 1,000/day, 8,000 tokens/minute, **200,000 tokens/day**, shared by every player (Groq rate-limit page, read 2026-11-15). Inputs/outputs not retained by default | Measured 2026-11-16: about 1,700 tokens per Tutor answer, about 3,600 when a repair attempt is needed, so roughly 55–115 answers a day across all players |
+| **AI — beta: Groq free plan** (chosen 2026-11-16) | Tutor, Examiner, Advisor, Researcher, Course Builder | Free, no card | `openai/gpt-oss-120b`: 30 requests/minute, 1,000/day, 8,000 tokens/minute, **200,000 tokens/day**, shared by every player (Groq rate-limit page, read 2026-11-15). Inputs/outputs not retained by default | Measured 2026-11-16: about 1,700 tokens per Tutor answer, about 3,600 when a repair attempt is needed, so roughly 55–115 answers a day across all players |
 | AI — alternatives | Backup providers | Free tiers | Gemini's main free model reported as low as 20 requests/day (third-party reports, 2026); OpenRouter free models about 50/day without credits | Each is a settings change, not a rebuild |
-
 | **Open Library** and **Crossref** APIs | Confirming that books and articles the Researcher suggests exist | Free, no key | Open Library asks for light use; Crossref's public pool is rate-limited per address. At most 6 lookups per search, and each concept can be searched once a week | Only with many players searching at once; a failed lookup just leaves a suggestion unconfirmed |
+| **Wikipedia (MediaWiki API)** | Article text the Course Builder writes lessons from | Free, no key | Wikimedia asks for a descriptive User-Agent and modest request rates; we send a generic one and fetch about 1–2 pages per action | Only at large scale; text is CC BY-SA, so lessons credit it |
 
 A Researcher search measured about 700 input and 150–500 output tokens (one request against the
 30-a-day allowance).
+
+Course Builder (estimated from its limits, not yet measured): the outline is about 500 input and up
+to 2,500 output tokens; a lesson about 3,000 input (the article) and up to 3,500 output; its check
+about 1,500 input and up to 2,500 output. So a 4-lesson course is roughly 9 requests and 35,000–
+50,000 tokens, a quarter of Groq's free daily total. Building one lesson can briefly use most of the
+8,000 tokens-per-minute limit.
 
 ### Login emails (Supabase Auth)
 Supabase's built-in email sender is for testing only: it sends just a handful of emails per hour

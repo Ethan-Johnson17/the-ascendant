@@ -3,7 +3,7 @@
  * Function, Deno) and in Node tests; none of it may touch browser globals or read secrets itself.
  */
 
-export const aiRoles = ['game_master', 'tutor', 'examiner', 'strategist', 'researcher', 'progression_advisor'] as const;
+export const aiRoles = ['game_master', 'tutor', 'examiner', 'strategist', 'researcher', 'progression_advisor', 'course_builder'] as const;
 export type AiRole = (typeof aiRoles)[number];
 
 export interface AiMessage {
