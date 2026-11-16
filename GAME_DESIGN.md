@@ -283,6 +283,35 @@ Consider:
 
 Players may request more or less difficulty.
 
+## Learning rules (product owner decision, 2026-11-14)
+
+All numbers below are tunable configuration (`src/engine/learning/config.ts`), not hardcoded.
+
+- **Mastery stages are earned by evidence, never by XP.** To move up one stage in a competency, the
+  player must pass a check written for that next stage (score 80% or more) on **two different days**
+  (at least 20 hours apart, so a late-night pass and a just-after-midnight pass do not count as two
+  days). Stages advance one at a time.
+- Checks the game can mark itself (multiple choice, ordering, matching) can raise a competency as
+  far as **Proficient**. Advanced and Expert require applied evidence (written answers, scenarios,
+  projects), which arrives with the AI Examiner (Phase 4) and quests (Phase 5).
+- **Weakness Bank exit:** a wrong answer creates (or reopens) a weakness record for that concept. It
+  leaves the bank (marked resolved, never deleted) only after **three correct answers given when the
+  review is due**, roughly 1, 3 and 7 days after the mistake. A correct answer before the review is
+  due does not count; another mistake restarts the count.
+- **Repeat rewards:** XP is paid the **first time** a lesson is completed or a check is passed.
+  Repeating them pays nothing. The exception is a **retention review the game has scheduled**: a
+  pass while that review is due earns the review reward once.
+- **Retention:** after a competency is demonstrated, the game schedules reviews at growing intervals
+  (1, 3, 7, 14, 30, 60, 120 days). Failing a due review shortens the interval and marks the
+  competency "needs review", but **never lowers an earned mastery stage**.
+- **Difficulty** adapts per competency: strong recent accuracy moves questions up a level, weak
+  accuracy moves them down, and many open weaknesses hold difficulty at standard. The player can ask
+  for easier or harder questions in each campaign.
+- **Checks are issued by the server.** The server picks the questions when a check starts and marks
+  the answers when it is submitted; the answer key never reaches the player's browser before then.
+- **Starter lessons** for the History pilot are written by the development team (not AI), checked
+  against museum and university sources, and marked for product-owner review.
+
 # 6. Character Progression and XP
 
 Three systems must remain separate.

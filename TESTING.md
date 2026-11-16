@@ -25,16 +25,56 @@ Run all automated tests: `npm test`
 | XP cannot be awarded twice for the same activity | Tested (`xpAward.test.ts`, `supabase/tests/security.test.ts`) |
 | Campaign XP isolated per campaign | Tested (`xpAward.test.ts`, `security.test.ts`) |
 | Players cannot set their own attributes, XP, mastery or campaign completion | Tested (`security.test.ts`) |
-| Attribute scores derive from competency mastery | Tested (`attributeGrowth.test.ts`); fed by real evidence in Phase 3 |
+| Attribute scores derive from competency mastery | Tested (`attributeGrowth.test.ts`); re-derived on every marked check (`learning.test.ts`) |
 | Database content matches `src/content` | Tested (`supabase/tests/content-sync.test.ts`) |
-| Competency progression follows defined requirements | Not started (Phase 3) |
-| Mastery decisions require evidence | Not started (Phase 3) |
+| Competency progression follows defined requirements | Tested (`learning.test.ts`, `supabase/tests/learning.test.ts`) |
+| Mastery decisions require evidence | Tested — two spaced passes needed; database refuses stage jumps and XP for failed checks |
+| Weakness not cleared by one correct answer | Tested (`learning.test.ts`, `supabase/tests/learning.test.ts`) |
+| Answer keys never reach the player before marking | Tested (column permission + `publicItem`) |
+| Submitted checks cannot be changed | Tested (trigger, even for server code) |
 | Bosses cannot unlock prematurely | Not started (Phase 5) |
 | Boss failure does not erase permanent progression | Not started (Phase 5) |
 | Users cannot access other users' records | Tested offline (`security.test.ts`); re-checked on the live project in Milestone B |
 | AI outputs cannot bypass engine rules | Not started (Phase 4) |
 
 ## Current results
+
+### 2026-11-14 — Phase 3 Milestone B (live Supabase project)
+Automated: **135 tests, 135 passing**; typecheck clean; build clean. New: the content migration
+matches the authored curriculum; every lesson and question is in the database; no app screen
+imports the curriculum file. The production bundle was searched for curriculum identifiers: none found.
+
+Live walkthrough in the in-app browser, signed in as the product owner's development account:
+
+| Journey | Result |
+|---|---|
+| Dashboard → Continue learning → campaign page: 4 lessons, 5 checks, later checks locked, matrix shows 2 competencies with lessons | Pass |
+| Read "The land between the rivers" → Complete lesson → +10 XP; four Codex entries unlocked | Pass |
+| Start check: only questions and options reach the browser (no answers) | Pass |
+| Submit 4/5 → Passed, +15 XP, "1 of 2 separate days", missed idea added to the Weakness Bank, explanations shown | Pass |
+| Same-day retake: the weak concept is asked again; 5/5 → no XP, still 1 of 2 days, early practice not counted as a review | Pass |
+| Weakness Bank: entry shows category, 0/3 reviews, next review date, "Practise early" link | Pass |
+| Codex: entries in lesson order, statuses (learned / practised / needs review / not yet learned), expand shows explanation and references | Pass |
+| Phone width (375 px): six-tab bar fits after shortening labels; no sideways scroll | Pass |
+| Every Supabase request on the campaign page returns 200 | Pass |
+
+Not covered yet: a pass on a second day (needs 20 hours); clearing a weakness on live (needs due
+dates; tested offline); ordering and matching questions in the browser (5 of the 35 questions; none
+was picked in these two checks); retention reviews coming due; real phones.
+
+### 2026-11-14 — Phase 3 Milestone A (offline)
+Automated: **132 tests, 132 passing**; typecheck clean; build clean.
+
+New: `src/engine/learning/learning.test.ts` (30: curriculum checks, marking, mastery, retention,
+Weakness Bank, difficulty, whole-check decisions), `supabase/tests/learning.test.ts` (14: the full
+loop through the same service code the Edge Function runs, against the real migrations — first-pass
+XP only, second-day stage advance, review XP, locked/paused/duplicate refusals, lesson completion,
+weakness clearing, isolation between players, forged outcomes refused by the database, immutable
+attempts, deletion), `src/services/learning/serverSafe.test.ts` (the Edge Function reaches only
+Deno-safe code).
+
+Not yet tested: the Edge Function running on Supabase's Deno runtime (not deployed; no Deno or
+Docker on this machine). Planned for Milestone B together with the screens.
 
 ### 2026-11-14 — Phase 2 Milestone B (live Supabase project)
 Automated: **87 tests, 87 passing**; typecheck clean; build clean (large libraries split into

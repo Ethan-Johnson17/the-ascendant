@@ -19,6 +19,11 @@ const CreateCharacterPage = lazy(() => import('../pages/CreateCharacterPage.tsx'
 const DashboardPage = lazy(() => import('../pages/DashboardPage.tsx'));
 const CharacterSheetPage = lazy(() => import('../pages/CharacterSheetPage.tsx'));
 const CampaignsPage = lazy(() => import('../pages/CampaignsPage.tsx'));
+const CampaignPage = lazy(() => import('../pages/CampaignPage.tsx'));
+const LessonPage = lazy(() => import('../pages/LessonPage.tsx'));
+const CheckPage = lazy(() => import('../pages/CheckPage.tsx'));
+const CodexPage = lazy(() => import('../pages/CodexPage.tsx'));
+const WeaknessBankPage = lazy(() => import('../pages/WeaknessBankPage.tsx'));
 const InventoryPage = lazy(() => import('../pages/InventoryPage.tsx'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage.tsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.tsx'));
@@ -98,6 +103,11 @@ export function App() {
                 <Route index element={<RequireCharacter><DashboardPage /></RequireCharacter>} />
                 <Route path="/character" element={<RequireCharacter><CharacterSheetPage /></RequireCharacter>} />
                 <Route path="/campaigns" element={<RequireCharacter><CampaignsPage /></RequireCharacter>} />
+                <Route path="/campaigns/:campaignId" element={<RequireCharacter><CampaignPage /></RequireCharacter>} />
+                <Route path="/campaigns/:campaignId/lesson/:lessonKey" element={<RequireCharacter><LessonPage /></RequireCharacter>} />
+                <Route path="/campaigns/:campaignId/check/:checkKey" element={<RequireCharacter><CheckPage /></RequireCharacter>} />
+                <Route path="/codex" element={<RequireCharacter><CodexPage /></RequireCharacter>} />
+                <Route path="/weaknesses" element={<RequireCharacter><WeaknessBankPage /></RequireCharacter>} />
                 <Route path="/inventory" element={<RequireCharacter><InventoryPage /></RequireCharacter>} />
                 <Route path="/settings" element={<RequireAccount><PlayerLoaded><SettingsPage /></PlayerLoaded></RequireAccount>} />
                 <Route path="*" element={<NotFoundPage />} />

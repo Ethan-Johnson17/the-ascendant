@@ -96,17 +96,26 @@ importable by server code. No product requirement changes.
 
 ## 4. Data flow — example: answering an assessment
 
-1. Player submits an answer in the Learning interface.
-2. Browser calls `POST /functions/v1/submit-assessment` with `{ activityId, answer, idempotencyKey }`.
-3. Function loads the activity, its rubric, and the player's competency state.
+*Built in Phase 3 Milestone A for self-marked questions; written answers and the Examiner arrive in Phase 4.*
+
+0. Starting a check: browser calls `POST /functions/v1/learning` `{ action: 'start_check', campaignId, activityId }`.
+   The engine picks the questions (difficulty from recent accuracy, weaknesses and the player's
+   preference) and the attempt is recorded with exactly those questions — answer keys stay on the server.
+1. Player submits answers in the Learning interface.
+2. Browser calls `POST /functions/v1/learning` with `{ action: 'submit_check', attemptId, answers }`.
+3. Function (`supabase/functions/learning` → `src/services/learning/learningService.ts`) loads the
+   attempt, the issued questions with their answer keys, and the player's competency state via
+   service-role SQL functions (`learning_submit_context`).
 4. Multiple-choice → graded deterministically by the engine. Written answer → **Examiner** role returns
    a structured evaluation (score per rubric criterion, misconceptions, error category).
 5. Evaluation is validated with zod. Invalid → retry once, then fail safely ("evaluation unavailable,
    your answer is saved") — never a guessed grade.
 6. Engine computes: XP award (or none if already awarded), evidence record, mastery change if the
    evidence rules are met, Weakness Bank update, next review date.
-7. All changes commit in one transaction. The idempotency key has a unique constraint, so a
-   double-click or network retry cannot award XP twice.
+7. All changes commit in one transaction (`learning_record_submission`), which re-checks the key rules
+   (one stage at a time, only on a pass, no XP for a failed check, attempt not already submitted).
+   The idempotency key has a unique constraint, so a double-click or network retry cannot award XP twice.
+   Submitted attempts are immutable (trigger), so evidence can be audited later.
 8. Browser receives the result and animates it.
 
 ## 5. Game-state management (client)
@@ -158,7 +167,7 @@ importable by server code. No product requirement changes.
 | Toolchain config (Vite, TS, Tailwind v4, scripts) | Tested on Windows / Node 24 (2026-11-13) |
 | Design tokens | Implemented |
 | Environment validation | Implemented, tested |
-| Supabase client + connection check | Implemented, untested against a live project |
+| Supabase client + connection check | Implemented, tested live |
 | Engine: progression config + level curve | Implemented, tested |
 | App shell, navigation, 6 screens, reusable components | Implemented, manually tested (Phase 1) |
 | Engine: character creation, campaign lifecycle | Implemented, tested |
@@ -166,4 +175,10 @@ importable by server code. No product requirement changes.
 | Accounts (Supabase Auth), online saves, inventory, achievements | Implemented, tested live (Phase 2) |
 | Database migrations, RLS, triggers, XP function | Implemented, tested offline and applied live |
 | Engine: attribute growth, XP award planning | Implemented, tested |
+| Engine: learning rules (curriculum, marking, mastery, retention, weaknesses, difficulty) | Implemented, tested (Phase 3 A) |
+| Learning database tables and service-role functions | Implemented, tested offline and applied live |
+| `learning` Edge Function | Deployed; tested live (lesson, check, retake) |
+| Authored curriculum (`src/content/curricula/`, server-side only) → generated migration | Implemented, tested; Mesopotamia geography + agriculture |
+| Learning screens: campaign, lesson, check, Knowledge Codex, Weakness Bank | Implemented, tested live (Phase 3 B) |
+| Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4) |
 | Everything else | Not started |

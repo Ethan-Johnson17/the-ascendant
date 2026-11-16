@@ -20,6 +20,7 @@ export interface LevelCurve {
 /** Categories of meaningful educational activity, from GAME_DESIGN.md §6. */
 export const xpActivityKinds = [
   'lesson_completed',
+  'knowledge_check_passed',
   'concept_explained',
   'applied_problem_solved',
   'practical_project_completed',
@@ -43,6 +44,7 @@ export const defaultProgressionConfig: ProgressionConfig = {
   campaignLevels: { maxLevel: 10, base: 80, exponent: 1.5 },
   baseXp: {
     lesson_completed: 10, //            small
+    knowledge_check_passed: 15, //      small (first pass of each check, Phase 3)
     concept_explained: 25, //           moderate
     applied_problem_solved: 50, //      substantial
     practical_project_completed: 75, // substantial

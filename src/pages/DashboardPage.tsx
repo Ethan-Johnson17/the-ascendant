@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronRight, Hourglass, Lock, Map, Pause } from 'lucide-react';
+import { BookOpen, Check, ChevronRight, Hourglass, Lock, Map, Pause } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
 import { Panel } from '../components/ui/Panel.tsx';
 import { Badge } from '../components/ui/Badge.tsx';
@@ -30,8 +30,9 @@ export default function DashboardPage() {
   const road = [
     { label: 'Create your character', done: true },
     { label: 'Begin a campaign', done: player.campaigns.length > 0 },
-    { label: 'Complete your first lesson', done: false, note: 'Lessons arrive in Phase 3' },
-    { label: 'Demonstrate knowledge to raise an attribute', done: false, note: 'Phase 3' },
+    // Campaign XP only comes from lessons, checks and reviews, so any XP means a lesson was completed.
+    { label: 'Complete your first lesson', done: player.campaigns.some((c) => c.campaignXp > 0) },
+    { label: 'Pass a knowledge check on two different days to raise a competency', done: false, note: 'Shown on the campaign page' },
     { label: 'Face your first boss', done: false, note: 'Phase 5' },
   ];
 
@@ -65,10 +66,11 @@ export default function DashboardPage() {
                 <Badge>{template.module}</Badge>
               </div>
               <LevelProgress totalXp={current.campaignXp} curve={defaultProgressionConfig.campaignLevels} label="Campaign" compact />
-              <Notice>
-                Your campaign is ready, but its lessons and quests are not built yet. They arrive with the learning engine in Phase 3.
-              </Notice>
+              <p className="text-ash">Lessons and knowledge checks are ready. Quests and bosses arrive in Phase 5.</p>
               <div className="flex flex-wrap gap-2">
+                <ButtonLink to={`/campaigns/${current.id}`} icon={<BookOpen className="size-4" aria-hidden />}>
+                  Continue learning
+                </ButtonLink>
                 <ButtonLink to="/campaigns" variant="secondary" icon={<Map className="size-4" aria-hidden />}>
                   {otherCount > 0 ? `All campaigns (${player.campaigns.length})` : 'Campaigns'}
                 </ButtonLink>

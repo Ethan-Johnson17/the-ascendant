@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --test \"src/**/*.test.ts\" \"supabase/tests/**/*.test.ts\"",
-    "test:watch": "tsx --test --watch \"src/**/*.test.ts\" \"supabase/tests/**/*.test.ts\""
+    "test:watch": "tsx --test --watch \"src/**/*.test.ts\" \"supabase/tests/**/*.test.ts\"",
+    "content:sql": "tsx scripts/generateContentSql.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

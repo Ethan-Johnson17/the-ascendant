@@ -58,3 +58,12 @@ model than Game Master without code changes. Providers planned:
 - Every lesson claim carries a strength label: established fact, scholarly consensus, competing
   interpretations, disputed, speculation.
 - Retrieved text is untrusted: wrapped in delimiters, instructions inside it are ignored.
+
+## Curriculum generation (interface built in Phase 3)
+
+`src/services/curriculum/generator.ts` defines `CurriculumGenerator.propose(request, templateId)`.
+`generateCurriculum` validates the learner's request, calls the generator, and accepts the result only
+if `validateCurriculum` passes (shape, references, answerable answer keys, cited lessons). Phase 4 adds
+an AI-backed generator behind this interface. Today the only implementation is the development
+fixture (`src/fixtures/fixtureCurriculumGenerator.ts`), which is marked `origin: 'fixture'` and whose
+text says it is placeholder material.

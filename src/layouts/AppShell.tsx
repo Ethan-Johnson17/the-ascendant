@@ -1,7 +1,7 @@
 import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../app/AuthProvider.tsx';
-import { Backpack, FlaskConical, LayoutDashboard, Map, Settings, UserRound, type LucideIcon } from 'lucide-react';
+import { Backpack, FlaskConical, LayoutDashboard, Library, Map, Settings, Target, UserRound, type LucideIcon } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
 import { Crest } from '../components/game/Crest.tsx';
 import { Button } from '../components/ui/Button.tsx';
@@ -17,14 +17,20 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Shorter label for the phone tab bar. */
+  short?: string;
+  /** Left out of the phone tab bar (reachable from another screen). */
+  desktopOnly?: boolean;
 }
 
-// Only screens that exist are listed. Later phases add Codex, Weakness Bank, etc.
+// Only screens that exist are listed.
 const nav: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/character', label: 'Character', icon: UserRound },
-  { to: '/campaigns', label: 'Campaigns', icon: Map },
-  { to: '/inventory', label: 'Inventory', icon: Backpack },
+  { to: '/', label: 'Dashboard', short: 'Home', icon: LayoutDashboard, end: true },
+  { to: '/character', label: 'Character', short: 'Hero', icon: UserRound },
+  { to: '/campaigns', label: 'Campaigns', short: 'Learn', icon: Map },
+  { to: '/codex', label: 'Codex', icon: Library },
+  { to: '/weaknesses', label: 'Weakness Bank', short: 'Review', icon: Target },
+  { to: '/inventory', label: 'Inventory', icon: Backpack, desktopOnly: true },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -125,9 +131,9 @@ export function AppShell() {
       {/* Mobile bottom navigation */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-iron/70 bg-obsidian/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-iron/70 bg-obsidian/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
-        {nav.map((item) => (
+        {nav.filter((item) => !item.desktopOnly).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -139,7 +145,7 @@ export function AppShell() {
             {({ isActive }) => (
               <>
                 <item.icon className={cn('size-5', isActive && 'drop-shadow-[0_0_6px_var(--color-gold-500)]')} aria-hidden />
-                {item.label}
+                {item.short ?? item.label}
               </>
             )}
           </NavLink>
