@@ -98,7 +98,7 @@ Split into two milestones. **A** needs nothing from the product owner; **B** nee
 
 XP is not yet *earned* through play — awards come from server functions when lessons exist (Phase 3).
 
-## Phase 3 — Learning engine — *Built and tested live; awaiting review and merge*
+## Phase 3 — Learning engine — *Complete (merged 2026-11-15, PR #4). Lesson text accepted by the product owner "for now"*
 Curriculum structures, objectives, activities, assessments, evidence-based mastery, adaptive
 difficulty, spaced repetition, Weakness Bank, Knowledge Codex.
 
@@ -126,7 +126,7 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | Item | Status |
 |---|---|
 | Learning migration applied to the live project; `learning` Edge Function deployed | Completed, tested live |
-| Mesopotamia lessons: Geography and environment, Agriculture and settlement (4 lessons, 5 checks, 35 questions, 15 Codex entries, 6 checked sources) | Completed. **Awaiting product-owner review** of the lesson text |
+| Mesopotamia lessons: Geography and environment, Agriculture and settlement (4 lessons, 5 checks, 35 questions, 15 Codex entries, 6 checked sources) | Completed. Accepted by the product owner for now (2026-11-15) |
 | Content kept in code, turned into a migration (`npm run content:sql`); a test fails if they drift apart | Completed, tested |
 | Campaign page: curriculum path, locks, review reminders, difficulty nudge, competency matrix | Completed, tested live |
 | Lesson screen with certainty labels and references; Complete lesson | Completed, tested live |
