@@ -1,6 +1,9 @@
 import { defaultAiConfig, groqDefaults } from './config.ts';
 import { createFixtureProvider } from './fixtureProvider.ts';
 import { createOpenAiCompatibleProvider } from './openAiCompatible.ts';
+import type { WrittenItem } from '../../engine/learning/curriculum.ts';
+import { fixtureAdvice, type AdvisorStep } from './roles/advisor.ts';
+import { fixtureExaminerJudgement } from './roles/examiner.ts';
 import { fixtureTutorAnswer, tutorMaterialSchema } from './roles/tutor.ts';
 import type { AiProvider } from './types.ts';
 
@@ -10,6 +13,13 @@ export function createDevelopmentFixtures(): AiProvider {
     tutor: (req) => {
       const hint = req.fixtureHint as { material?: unknown; question?: unknown } | undefined;
       return fixtureTutorAnswer(tutorMaterialSchema.parse(hint?.material), typeof hint?.question === 'string' ? hint.question : '');
+    },
+    progression_advisor: (req) => fixtureAdvice((req.fixtureHint as { steps?: AdvisorStep[] } | undefined)?.steps ?? []),
+    examiner: (req) => {
+      // The hint is the server's own already-validated question (keyed by database id).
+      const hint = req.fixtureHint as { item?: WrittenItem; answer?: unknown } | undefined;
+      if (hint?.item?.kind !== 'written') throw new Error('The Examiner fixture marks written questions only.');
+      return fixtureExaminerJudgement(hint.item, typeof hint.answer === 'string' ? hint.answer : '');
     },
   });
 }

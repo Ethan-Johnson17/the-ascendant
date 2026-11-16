@@ -10,9 +10,9 @@
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { authoredCurriculaSql } from '../src/content/curricula/index.ts';
+import { authoredCurriculaSql, contentMigrationFile } from '../src/content/curricula/index.ts';
 
-const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'migrations', '20261114000400_history_pilot_curriculum.sql');
+const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'migrations', contentMigrationFile);
 const result = authoredCurriculaSql();
 if (!result.ok) {
   console.error('Curriculum is invalid; nothing written:\n' + result.issues.map((i) => `  - ${i}`).join('\n'));

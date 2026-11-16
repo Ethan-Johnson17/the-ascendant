@@ -1,9 +1,9 @@
 # The Ascendant — AI System
 
-Status: **Phase 4 Milestone A built.** The provider layer, limits, usage log and the Tutor are
-implemented and tested; the `ai` Edge Function is deployed and answering with Groq
-(`openai/gpt-oss-120b`). Settings are read on every request, so changing a secret needs no redeploy. Examiner and Progression Advisor: Milestone B. Researcher, AI curricula, Game Master
-and Strategist formats: Milestone C.
+Status: **Phase 4 Milestones A and B built.** The provider layer, limits, usage log, the Tutor, the
+Examiner and the Progression Advisor are implemented and tested, and run live with Groq
+(`openai/gpt-oss-120b`). Settings are read on every request, so changing a secret needs no redeploy.
+Researcher, AI curricula, Game Master and Strategist formats: Milestone C.
 
 ## Current setup (Milestone A)
 
@@ -17,7 +17,9 @@ and Strategist formats: Milestone C.
 Code in `src/services/ai/`:
 - `types.ts`, `openAiCompatible.ts`, `fixtureProvider.ts`;
 - `structured.ts` (schema-checked replies);
-- `roles/tutor.ts`, `aiService.ts`, `providerFromEnv.ts`;
+- `roles/tutor.ts`, `roles/examiner.ts`, `roles/advisor.ts`;
+- `aiService.ts` (Tutor, Advisor), `examinerService.ts` (used by the `learning` function), `usageLog.ts` (shared limits and log);
+- `providerFromEnv.ts`;
 - `aiClient.ts` (browser).
 
 Limits in `config.ts`: 30 requests per player per rolling 24 hours, 5 per minute, 30 s timeout, one
@@ -40,6 +42,35 @@ and declared data; closing tags inside them are removed.
 
 Labels are mapped back to source ids; unknown labels are removed and the paragraph is shown as
 unsupported. Conversations are not stored.
+
+### Examiner (Milestone B)
+Runs inside the `learning` Edge Function when a check with written answers is submitted: one request
+per non-blank written answer, all counted against the player's daily limit (checked before any is
+spent).
+
+**Input:** the question, the rubric criteria labelled C1, C2... with their points, the model answer
+(as one example of a good answer), and the player's answer inside `<answer>`, declared data.
+
+**Output:** for each criterion `met` and a `quote` copied from the answer; `confidence`
+(high / medium / low); the main error category or "none"; two or three sentences of feedback.
+
+**Checks before the engine uses it** (`checkJudgement`): every criterion judged exactly once, no
+unknown labels, every "met" quote found in the answer (case, punctuation and curly quotes ignored),
+and confidence "high". If any check fails, the mark is "not confident" and the engine makes the whole
+attempt not count. The engine, not the AI, adds up the points and compares them with the item's pass
+points. The judgement (criteria, quotes, confidence, feedback, provider, model) is stored with the
+attempt in `assessment_attempts.marking`; the prompt is not.
+
+If the Examiner fails (timeout, outage, garbled reply), nothing is recorded and the player can
+submit the same answers again.
+
+### Progression Advisor (Milestone B)
+The plan is the engine's (`src/engine/learning/nextSteps.ts`): due reviews, then due Weakness Bank
+reviews, then the next lesson, then the check that moves a competency forward; at most three steps.
+It shows on the dashboard with no AI. "Explain my plan" sends only the step kinds and activity ids;
+the server looks up the curriculum titles (`ai_advisor_context`), so nothing the player typed reaches
+the AI. The reply must explain every step exactly once, in order, or it isn't shown. It may not state
+subject facts or promise rewards.
 
 ## Roles
 

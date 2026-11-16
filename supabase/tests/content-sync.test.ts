@@ -5,7 +5,7 @@ import { backgrounds, classes, races, tinctures } from '../../src/content/charac
 import { campaignTemplates } from '../../src/content/campaigns/catalog.ts';
 import { achievements } from '../../src/content/achievements.ts';
 import { xpActivityKinds } from '../../src/engine/progression/config.ts';
-import { authoredCurricula, authoredCurriculaSql } from '../../src/content/curricula/index.ts';
+import { authoredCurricula, authoredCurriculaSql, contentMigrationFile } from '../../src/content/curricula/index.ts';
 import { listActivities, validateCurriculum } from '../../src/engine/learning/curriculum.ts';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -70,7 +70,7 @@ describe('content in the database matches src/content', () => {
   it('authored curricula: the migration is exactly what `npm run content:sql` generates', () => {
     const generated = authoredCurriculaSql();
     assert.ok(generated.ok, generated.ok ? '' : generated.issues.join('\n'));
-    const file = readFileSync(join(here, '..', 'migrations', '20261114000400_history_pilot_curriculum.sql'), 'utf8').replace(/\r\n/g, '\n');
+    const file = readFileSync(join(here, '..', 'migrations', contentMigrationFile), 'utf8').replace(/\r\n/g, '\n');
     assert.equal(file, generated.sql, 'Run `npm run content:sql` and commit the result.');
   });
 

@@ -1,5 +1,40 @@
 # Development Log
 
+## 2026-11-16 — Phase 4 Milestone B: the Examiner and the Progression Advisor
+
+**Product owner decisions:** written questions both inside existing checks and in new Advanced
+checks; if the Examiner is unsure, the whole attempt doesn't count; the Advisor's plan is always
+shown and the AI explains it on request. Recorded in GAME_DESIGN.md "AI rules".
+
+**Built:**
+- engine: `written` questions with rubrics, "confident" attempts, Advanced cap for written work,
+  `planAttempt` without the Examiner, `nextSteps.ts`;
+- server: `roles/examiner.ts`, `roles/advisor.ts`, `examinerService.ts`, `usageLog.ts` (shared by all
+  roles), the `advise` action;
+- database: migration `20261116000200_written_answers.sql`, content v2;
+- screens: written answers and rubric feedback on the check screen, "Next steps" on the dashboard.
+
+**Choices:**
+- *Quotes as evidence.* Every criterion the Examiner says is met must quote the player's answer, and
+  the quote is checked. This stops the AI crediting things the player never wrote.
+- *The Examiner runs inside the `learning` function*, not the `ai` one, so marking and recording happen
+  in one request and a browser can't submit a mark of its own.
+- *If marking fails, nothing is recorded*, so a provider outage never costs the player an attempt.
+- *Content releases get a new migration file.* The generator used to rewrite the Phase 3 file, which
+  Supabase won't re-apply once applied.
+- *The Advisor never sees free text*: the browser sends step kinds and ids; titles come from the database.
+
+**Problems hit:** the Examiner fixture re-validated questions with the authoring schema, which rejects
+database ids; it now trusts the server's already-validated question. A test word ("fertile") also
+appeared inside "infertile" in a choice option; the test now uses a rubric-only phrase.
+
+**Live test:** see TESTING.md. One finding: a cheating attempt in the answer box was marked 0 of 4
+with *high* confidence, rather than the "low" the prompt asks for. The result is still safe (no
+points), but it counted as a wrong answer and added a Weakness Bank review on the test account.
+
+**Open:** take an Advanced check live once a competency is Proficient; see how often real answers
+get "didn't count"; log repair reasons (field names only).
+
 ## 2026-11-16 — Phase 4 Milestone A: AI foundation and the Tutor
 
 **Product owner decisions:** Groq free tier; Tutor first; written answers count only when the

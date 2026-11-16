@@ -24,7 +24,7 @@ export const defaultAiConfig: AiConfig = {
   timeoutMs: 30_000,
   transientRetries: 1,
   // Reasoning models spend part of this budget thinking before they answer.
-  maxOutputTokens: { tutor: 2000 },
+  maxOutputTokens: { tutor: 2000, examiner: 1500, progression_advisor: 1200 },
   tutor: { maxQuestionChars: 500, maxHistoryTurns: 3, maxHistoryChars: 1500 },
 };
 

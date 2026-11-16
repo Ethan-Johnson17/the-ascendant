@@ -4,7 +4,7 @@ import { planXpAward, type XpAwardPlan } from '../progression/xpAward.ts';
 import { defaultLearningConfig, type Difficulty, type DifficultyPreference, type LearningConfig } from './config.ts';
 import type { AssessmentItem } from './curriculum.ts';
 import { recommendDifficulty, selectItems } from './difficulty.ts';
-import { gradeAttempt, type Answer, type AttemptGrade } from './grading.ts';
+import { gradeAttempt, needsExaminer, type Answer, type AttemptGrade, type WrittenMark } from './grading.ts';
 import { checkUnlocked, decideMastery, type MasteryDecision } from './mastery.ts';
 import { applyRetentionResult, type RetentionState } from './retention.ts';
 import { applyAnswerToWeakness, type WeaknessEvent, type WeaknessState } from './weakness.ts';
@@ -29,18 +29,24 @@ export interface CompetencyContext {
   readonly lastDifficulty: Difficulty | null;
 }
 
-export type Refusal = { ok: false; code: 'not_found' | 'locked' | 'campaign_inactive' | 'already_submitted' | 'invalid'; message: string };
+export type Refusal = {
+  ok: false;
+  code: 'not_found' | 'locked' | 'campaign_inactive' | 'already_submitted' | 'invalid' | 'examiner_unavailable';
+  message: string;
+};
 
 // ───────────────────────────────────────────────────────── Starting a check
 
 export interface StartContext {
   readonly campaignStatus: 'active' | 'paused' | 'completed';
-  readonly activity: { readonly id: string; readonly targetStage: number; readonly questionCount: number };
+  readonly activity: { readonly id: string; readonly targetStage: number; readonly questionCount: number; readonly writtenCount: number };
   /** Every question in the check's pool, keyed by database id in `item.key`. */
   readonly items: readonly AssessmentItem[];
   readonly competencies: readonly CompetencyContext[];
   readonly preference: DifficultyPreference;
   readonly weakConcepts: ReadonlySet<string>;
+  /** The Examiner can mark this many written answers for the player right now. */
+  readonly writtenAvailable: boolean;
 }
 
 export type AttemptPlan = { ok: true; difficulty: Difficulty; items: readonly AssessmentItem[] } | Refusal;
@@ -52,7 +58,19 @@ export function planAttempt(ctx: StartContext, seed: string, config: LearningCon
   if (ctx.competencies.length === 0) return { ok: false, code: 'invalid', message: 'This check is not linked to any competency.' };
   const locked = ctx.competencies.find((c) => !checkUnlocked(c.stage, ctx.activity.targetStage));
   if (locked) return { ok: false, code: 'locked', message: 'Reach the previous mastery stage before taking this check.' };
-  if (ctx.items.length < ctx.activity.questionCount) return { ok: false, code: 'invalid', message: 'This check does not have enough questions.' };
+  // Without the Examiner, written questions are left out of checks that work without them
+  // (up to Proficient); checks made only of written questions wait (GAME_DESIGN.md "AI rules").
+  let writtenCount = ctx.activity.writtenCount;
+  if (writtenCount > 0 && !ctx.writtenAvailable) {
+    if (writtenCount >= ctx.activity.questionCount) {
+      return { ok: false, code: 'examiner_unavailable', message: 'This check is made of written questions, and the Examiner isn’t available right now. Please try again later.' };
+    }
+    writtenCount = 0;
+  }
+  const written = ctx.items.filter((i) => i.kind === 'written');
+  const others = ctx.items.filter((i) => i.kind !== 'written');
+  const otherCount = ctx.activity.questionCount - writtenCount;
+  if (written.length < writtenCount || others.length < otherCount) return { ok: false, code: 'invalid', message: 'This check does not have enough questions.' };
 
   // Difficulty follows the weakest competency the check covers.
   const difficulty = Math.min(
@@ -60,7 +78,12 @@ export function planAttempt(ctx: StartContext, seed: string, config: LearningCon
       recommendDifficulty({ recentResults: c.recentResults, openWeaknesses: c.openWeaknesses, preference: ctx.preference, lastDifficulty: c.lastDifficulty }, config),
     ),
   ) as Difficulty;
-  return { ok: true, difficulty, items: selectItems(ctx.items, ctx.activity.questionCount, difficulty, seed, ctx.weakConcepts) };
+  // Written questions come last, after the quicker ones.
+  const items = [
+    ...(otherCount > 0 ? selectItems(others, otherCount, difficulty, seed, ctx.weakConcepts) : []),
+    ...(writtenCount > 0 ? selectItems(written, writtenCount, difficulty, `${seed}:written`, ctx.weakConcepts) : []),
+  ];
+  return { ok: true, difficulty, items };
 }
 
 // ───────────────────────────────────────────────────────── Submitting a check
@@ -95,6 +118,11 @@ export interface WeaknessOutcome {
 
 export interface SubmissionOutcome {
   readonly ok: true;
+  /**
+   * False when a written answer could not be marked confidently. Such an attempt is recorded, but
+   * changes nothing: no pass, fail, XP, retention or Weakness Bank update.
+   */
+  readonly counted: boolean;
   readonly grade: AttemptGrade;
   readonly competencies: readonly CompetencyOutcome[];
   readonly weaknesses: readonly WeaknessOutcome[];
@@ -107,17 +135,37 @@ export function resolveSubmission(
   answers: Readonly<Record<string, Answer>>,
   now: Date,
   config: LearningConfig = defaultLearningConfig,
+  /** The Examiner's checked marks for written answers, by item key. */
+  marks: Readonly<Record<string, WrittenMark>> = {},
 ): SubmissionOutcome | Refusal {
   if (ctx.attempt.submitted) return { ok: false, code: 'already_submitted', message: 'This check has already been submitted.' };
   if (ctx.items.length === 0) return { ok: false, code: 'invalid', message: 'This attempt has no questions.' };
 
-  const grade = gradeAttempt(ctx.items, answers, config.mastery.passMark);
+  const missing = ctx.items.find((i) => needsExaminer(i, answers[i.key]) && !marks[i.key]);
+  if (missing) return { ok: false, code: 'examiner_unavailable', message: 'A written answer has not been marked yet. Please try submitting again.' };
 
+  const grade = gradeAttempt(ctx.items, answers, config.mastery.passMark, marks);
+  const standingAttributes = () => deriveAttributes(ctx.standings.map((s) => ({ attribute: s.attribute, masteryStage: s.stage })));
+
+  if (!grade.confident) {
+    const competencies = ctx.competencies.map<CompetencyOutcome>((c) => ({
+      competencyId: c.competencyId,
+      previousStage: c.stage,
+      mastery: { stage: c.stage, advanced: false, spacedPasses: 0, passesRequired: config.mastery.passesRequired, reason: 'This attempt didn’t count, so nothing changed.' },
+      retention: c.retention,
+      evidence: false,
+      reviewedWhileDue: false,
+    }));
+    return { ok: true, counted: false, grade, competencies, weaknesses: [], attributes: standingAttributes(), xp: [] };
+  }
+
+  // Written work can carry a competency further than self-marked questions.
+  const cap = ctx.items.some((i) => i.kind === 'written') ? config.mastery.maxStageFromWritten : config.mastery.maxStageFromChecks;
   const competencies: CompetencyOutcome[] = ctx.competencies.map((c) => {
     const evidence = grade.passed && checkUnlocked(c.stage, ctx.activity.targetStage);
     // Only a pass of the next stage's check moves the stage; easier checks still count for retention.
     const countsForNext = evidence && ctx.activity.targetStage === c.stage + 1;
-    const mastery = decideMastery(c.stage, countsForNext ? [...c.passTimesForNext, now] : c.passTimesForNext, config);
+    const mastery = decideMastery(c.stage, countsForNext ? [...c.passTimesForNext, now] : c.passTimesForNext, config, cap);
     const retention = applyRetentionResult(c.retention, grade.passed, now, config);
     return { competencyId: c.competencyId, previousStage: c.stage, mastery, retention: retention.state, evidence, reviewedWhileDue: retention.wasDueReview };
   });
@@ -146,7 +194,7 @@ export function resolveSubmission(
     }
   }
 
-  return { ok: true, grade, competencies, weaknesses: [...touched.values()], attributes, xp };
+  return { ok: true, counted: true, grade, competencies, weaknesses: [...touched.values()], attributes, xp };
 }
 
 // ───────────────────────────────────────────────────────── Completing a lesson

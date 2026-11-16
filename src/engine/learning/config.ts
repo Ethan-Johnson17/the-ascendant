@@ -39,6 +39,8 @@ export interface LearningConfig {
     readonly minHoursBetweenPasses: number;
     /** Highest stage self-marked checks can award (4 = Proficient). */
     readonly maxStageFromChecks: 2 | 3 | 4;
+    /** Highest stage checks with confidently marked written answers can award (5 = Advanced). */
+    readonly maxStageFromWritten: 4 | 5;
   };
   readonly retention: {
     /** Review intervals in days; a pass moves one step up, a failed due review two steps down. */
@@ -64,7 +66,7 @@ export interface LearningConfig {
 }
 
 export const defaultLearningConfig: LearningConfig = {
-  mastery: { passMark: 0.8, passesRequired: 2, minHoursBetweenPasses: 20, maxStageFromChecks: 4 },
+  mastery: { passMark: 0.8, passesRequired: 2, minHoursBetweenPasses: 20, maxStageFromChecks: 4, maxStageFromWritten: 5 },
   retention: { intervalsDays: [1, 3, 7, 14, 30, 60, 120], stepsBackOnFailure: 2 },
   weakness: { reviewGapsDays: [1, 2, 4], keepIncorrectResponses: 5 },
   difficulty: { window: 10, minAnswers: 5, raiseAtAccuracy: 0.85, lowerBelowAccuracy: 0.6, holdAtOpenWeaknesses: 3 },

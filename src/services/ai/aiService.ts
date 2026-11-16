@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { StoreError, type LearningStore } from '../learning/learningService.ts';
+import type { LearningStore } from '../learning/learningService.ts';
 import { defaultAiConfig, type AiConfig } from './config.ts';
 import { runStructured } from './structured.ts';
-import { AiError, noUsage, type AiOrigin, type AiProvider, type AiUsage } from './types.ts';
+import { createUsageLog } from './usageLog.ts';
+import { AiError, noUsage, type AiProvider } from './types.ts';
 import { buildTutorMessages, checkCitations, tutorAnswerSchema, tutorMaterialSchema, type TutorMaterial } from './roles/tutor.ts';
+import { advisorContextSchema, advisorReplySchema, advisorStepSchema, buildAdvisorMessages, checkAdvice, type AdvisorStep } from './roles/advisor.ts';
 
 /**
  * The server side of AI features: what the `ai` Edge Function runs for each request.
@@ -14,7 +16,7 @@ import { buildTutorMessages, checkCitations, tutorAnswerSchema, tutorMaterialSch
  *   4. check citations against known sources
  *   5. log the outcome                          (ai_finish_request; tokens, never text)
  *
- * The AI never changes game state here: the Tutor only explains. Runs unchanged in Node (tests,
+ * The AI never changes game state here: the Tutor and the Progression Advisor only explain. Runs unchanged in Node (tests,
  * against PGlite) and Deno (Edge Function).
  */
 
@@ -28,6 +30,12 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
       .array(z.object({ question: z.string().max(defaultAiConfig.tutor.maxQuestionChars), answer: z.string().max(defaultAiConfig.tutor.maxHistoryChars) }))
       .max(defaultAiConfig.tutor.maxHistoryTurns)
       .default([]),
+  }),
+  z.object({
+    action: z.literal('advise'),
+    campaignId: z.uuid(),
+    /** The engine's plan, as the app computed it. Only kinds and ids: titles come from the database. */
+    steps: z.array(advisorStepSchema).min(1).max(3),
   }),
   z.object({ action: z.literal('usage') }),
 ]);
@@ -43,9 +51,6 @@ export interface AiServiceOptions {
   readonly sleep?: (ms: number) => Promise<void>;
 }
 
-const reserveSchema = z.object({ requestId: z.uuid(), usedToday: z.number().int() });
-const usageSchema = z.object({ usedToday: z.number().int(), oldestAt: z.string().nullable() });
-
 /** Player-facing wording for each failure. Never claims a result the AI didn't give. */
 const failureMessage: Record<AiError['kind'] | 'internal', { status: number; error: string }> = {
   not_configured: { status: 503, error: 'The Tutor isn’t set up on this server yet.' },
@@ -57,6 +62,16 @@ const failureMessage: Record<AiError['kind'] | 'internal', { status: number; err
   internal: { status: 500, error: 'Something went wrong. Please try again.' },
 };
 
+const advisorFailure: Record<AiError['kind'] | 'internal', { status: number; error: string }> = {
+  not_configured: { status: 503, error: 'The Advisor isn’t set up on this server yet. Your next steps above still work.' },
+  timeout: { status: 504, error: 'The Advisor took too long. Your next steps above still work; try again later.' },
+  rate_limited: { status: 503, error: 'The Advisor is resting: the shared free AI allowance is used up for now.' },
+  unavailable: { status: 503, error: 'The Advisor can’t be reached right now. Please try again in a moment.' },
+  bad_output: { status: 502, error: 'The Advisor’s explanation came back garbled, so it wasn’t shown.' },
+  refused: { status: 422, error: 'The Advisor couldn’t explain this plan.' },
+  internal: { status: 500, error: 'Something went wrong. Please try again.' },
+};
+
 /**
  * @param provider `null` when no AI provider is configured: requests then fail clearly with
  *   `not_configured` and are not counted against the player's limit.
@@ -65,31 +80,8 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
   const now = options.now ?? (() => new Date());
   const config = options.config ?? defaultAiConfig;
 
-  const usage = async (userId: string) => {
-    const at = now();
-    const u = usageSchema.parse(await store.call('ai_usage', { p_user_id: userId, p_now: at.toISOString() }));
-    return {
-      used: u.usedToday,
-      limit: config.dailyRequestsPerPlayer,
-      remaining: Math.max(0, config.dailyRequestsPerPlayer - u.usedToday),
-      // When the oldest request in the window stops counting, one more becomes available.
-      nextFreeAt: u.usedToday >= config.dailyRequestsPerPlayer && u.oldestAt ? new Date(new Date(u.oldestAt).getTime() + 24 * 3600_000).toISOString() : null,
-    };
-  };
-
-  const finish = (userId: string, requestId: string, status: 'ok' | 'failed', meta: { origin: AiOrigin | null; usage: AiUsage; attempts: number; model: string | null; errorKind: string | null }) =>
-    store.call('ai_finish_request', {
-      p_user_id: userId,
-      p_request_id: requestId,
-      p_status: status,
-      p_origin: meta.origin,
-      p_provider: provider?.id ?? null,
-      p_model: meta.model,
-      p_input_tokens: meta.usage.inputTokens,
-      p_output_tokens: meta.usage.outputTokens,
-      p_attempts: meta.attempts,
-      p_error_kind: meta.errorKind,
-    });
+  const log = createUsageLog(store, provider?.id ?? null, config, now);
+  const { usage, finish } = log;
 
   async function askTutor(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'ask_tutor' }>): Promise<AiResponse> {
     const raw = await store.call('ai_tutor_context', { p_user_id: userId, p_campaign_id: req.campaignId, p_activity_id: req.lessonId });
@@ -97,24 +89,12 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
     const material: TutorMaterial = tutorMaterialSchema.parse(raw);
     if (!provider) return { status: failureMessage.not_configured.status, body: { error: failureMessage.not_configured.error, code: 'not_configured' } };
 
-    let reservation: z.infer<typeof reserveSchema>;
-    try {
-      reservation = reserveSchema.parse(
-        await store.call('ai_reserve_request', {
-          p_user_id: userId,
-          p_role: 'tutor',
-          p_campaign_id: req.campaignId,
-          p_now: now().toISOString(),
-          p_daily_limit: config.dailyRequestsPerPlayer,
-          p_minute_limit: config.requestsPerMinute,
-        }),
-      );
-    } catch (err) {
-      if (err instanceof StoreError && err.code === 'AL001') {
-        return { status: 429, body: { error: `You’ve used all ${config.dailyRequestsPerPlayer} Tutor questions for today. Lessons, checks and the Codex still work.`, code: 'daily_limit', usage: await usage(userId) } };
+    const reservation = await log.reserve(userId, 'tutor', req.campaignId);
+    if (!reservation.ok) {
+      if (reservation.code === 'daily_limit') {
+        return { status: 429, body: { error: `You’ve used all ${config.dailyRequestsPerPlayer} AI requests for today. Lessons, checks and the Codex still work.`, code: 'daily_limit', usage: await usage(userId) } };
       }
-      if (err instanceof StoreError && err.code === 'AL002') return { status: 429, body: { error: 'That’s a lot of questions in one minute. Take a breath and try again shortly.', code: 'minute_limit' } };
-      throw err;
+      return { status: 429, body: { error: 'That’s a lot of questions in one minute. Take a breath and try again shortly.', code: 'minute_limit' } };
     }
 
     const history = req.history.map((t) => ({ question: t.question, answer: t.answer }));
@@ -153,11 +133,71 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
     }
   }
 
+  async function advise(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'advise' }>): Promise<AiResponse> {
+    const ids = [...new Set(req.steps.map((st) => st.activityId))];
+    if (ids.length !== req.steps.length) return { status: 400, body: { error: 'The request was not understood.' } };
+    const raw = await store.call('ai_advisor_context', { p_user_id: userId, p_campaign_id: req.campaignId, p_activity_ids: ids });
+    if (raw === null) return { status: 404, body: { error: 'That campaign was not found.' } };
+    const ctx = advisorContextSchema.parse(raw);
+    const byId = new Map(ctx.activities.map((a) => [a.id, a] as const));
+    const steps: AdvisorStep[] = [];
+    for (const st of req.steps) {
+      const a = byId.get(st.activityId);
+      // A lesson step must name a lesson; every other kind names a check.
+      if (!a || (st.kind === 'lesson') !== (a.kind === 'lesson')) return { status: 422, body: { error: 'That plan doesn’t match this campaign.' } };
+      steps.push({ kind: st.kind, title: a.title });
+    }
+    if (!provider) return { status: advisorFailure.not_configured.status, body: { error: advisorFailure.not_configured.error, code: 'not_configured' } };
+
+    const reservation = await log.reserve(userId, 'progression_advisor', req.campaignId);
+    if (!reservation.ok) {
+      if (reservation.code === 'daily_limit') {
+        return { status: 429, body: { error: `You’ve used all ${config.dailyRequestsPerPlayer} AI requests for today. Your next steps still work without the Advisor.`, code: 'daily_limit', usage: await usage(userId) } };
+      }
+      return { status: 429, body: { error: 'That’s a lot of AI requests in one minute. Try again shortly.', code: 'minute_limit' } };
+    }
+    try {
+      const result = await runStructured(
+        provider,
+        {
+          role: 'progression_advisor',
+          schemaName: 'advisor_reply',
+          messages: buildAdvisorMessages(ctx.campaignTitle, steps),
+          maxOutputTokens: config.maxOutputTokens.progression_advisor ?? 1200,
+          temperature: 0.4,
+          fixtureHint: { steps },
+        },
+        advisorReplySchema,
+        { transientRetries: config.transientRetries, ...(options.sleep ? { sleep: options.sleep } : {}) },
+      );
+      const advice = checkAdvice(result.data, steps.length);
+      await finish(userId, reservation.requestId, advice ? 'ok' : 'failed', {
+        origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: advice ? null : 'bad_output',
+      });
+      if (!advice) return { status: advisorFailure.bad_output.status, body: { error: advisorFailure.bad_output.error, code: 'bad_output' } };
+      return {
+        status: 200,
+        body: {
+          advice: { summary: advice.summary, steps: req.steps.map((st, i) => ({ activityId: st.activityId, why: advice.whys[i]! })) },
+          origin: result.origin,
+          usage: { used: reservation.usedToday, limit: config.dailyRequestsPerPlayer, remaining: Math.max(0, config.dailyRequestsPerPlayer - reservation.usedToday) },
+        },
+      };
+    } catch (err) {
+      const kind = err instanceof AiError ? err.kind : 'internal';
+      await finish(userId, reservation.requestId, 'failed', { origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind });
+      if (kind === 'internal') throw err;
+      const f = advisorFailure[kind];
+      return { status: f.status, body: { error: f.error, code: kind } };
+    }
+  }
+
   async function handle(userId: string, body: unknown): Promise<AiResponse> {
     const req = aiRequestSchema.safeParse(body);
     if (!req.success) return { status: 400, body: { error: 'The request was not understood.', issues: req.error.issues.map((i) => i.message) } };
     try {
       if (req.data.action === 'usage') return { status: 200, body: { usage: await usage(userId), configured: provider !== null, origin: provider?.origin ?? null } };
+      if (req.data.action === 'advise') return await advise(userId, req.data);
       return await askTutor(userId, req.data);
     } catch (err) {
       if (err instanceof z.ZodError) return { status: 500, body: { error: 'The game data came back in an unexpected shape. Please try again later.' } };

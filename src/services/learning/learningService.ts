@@ -3,10 +3,11 @@ import { attributeIds } from '../../engine/character/attributes.ts';
 import type { MasteryStage } from '../../engine/character/attributeGrowth.ts';
 import { defaultLearningConfig, errorCategories, type Difficulty, type LearningConfig } from '../../engine/learning/config.ts';
 import { assessmentItemSchema, type AssessmentItem } from '../../engine/learning/curriculum.ts';
-import { answerSchema, publicItem } from '../../engine/learning/grading.ts';
+import { answerSchema, needsExaminer, publicItem } from '../../engine/learning/grading.ts';
 import { retentionStrength } from '../../engine/learning/retention.ts';
 import { planAttempt, planLessonCompletion, resolveSubmission, type CompetencyContext } from '../../engine/learning/session.ts';
 import type { WeaknessState } from '../../engine/learning/weakness.ts';
+import type { Examiner, ExaminerMarking } from '../ai/examinerService.ts';
 
 /**
  * The server side of learning: what the `learning` Edge Function runs for each request.
@@ -79,7 +80,7 @@ const weaknessRow = z.object({
 const startContextSchema = z.object({
   campaignStatus: z.enum(['active', 'paused', 'completed']),
   preference: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
-  activity: z.object({ id: z.string(), targetStage: z.number().int(), questionCount: z.number().int(), competencyIds: z.array(z.string()) }),
+  activity: z.object({ id: z.string(), targetStage: z.number().int(), questionCount: z.number().int(), writtenCount: z.number().int().default(0), competencyIds: z.array(z.string()) }),
   items: z.array(itemRow),
   competencies: z.array(competencyRow),
   weakConceptIds: z.array(z.string()),
@@ -133,24 +134,45 @@ function toWeakness(row: z.infer<typeof weaknessRow>): WeaknessState {
 
 /** The correct answer, for showing after marking. */
 function answerOf(item: AssessmentItem): unknown {
-  return item.answer;
+  return item.kind === 'written' ? item.modelAnswer : item.answer;
+}
+
+/** What the player sees of the Examiner's marking, after submitting (rubric included). */
+function writtenDetails(item: AssessmentItem, marking: ExaminerMarking | null, points: { earned: number; required: number; total: number } | undefined) {
+  if (item.kind !== 'written') return undefined;
+  const judged = marking?.items[item.key];
+  return {
+    criteria: item.criteria.map((c) => {
+      const j = judged?.criteria.find((x) => x.key === c.key);
+      return { key: c.key, description: c.description, points: c.points, met: j?.met ?? false, quote: j?.quote ?? '' };
+    }),
+    earned: points?.earned ?? 0,
+    required: points?.required ?? item.passPoints,
+    total: points?.total ?? item.criteria.reduce((n, c) => n + c.points, 0),
+    feedback: judged?.feedback ?? null,
+    confident: judged ? judged.mark.confident : true,
+    marked: !!judged,
+  };
 }
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-const refusalStatus = { not_found: 404, locked: 403, campaign_inactive: 409, already_submitted: 409, invalid: 422 } as const;
+const refusalStatus = { not_found: 404, locked: 403, campaign_inactive: 409, already_submitted: 409, invalid: 422, examiner_unavailable: 503 } as const;
 
 export interface LearningServiceOptions {
   readonly config?: LearningConfig;
   readonly now?: () => Date;
   /** Checks a player may start per hour (abuse limit). */
   readonly maxAttemptsPerHour?: number;
+  /** Marks written answers. Without it, written questions are left out (or their check waits). */
+  readonly examiner?: Examiner | null;
 }
 
 export function createLearningService(store: LearningStore, options: LearningServiceOptions = {}) {
   const config = options.config ?? defaultLearningConfig;
   const now = options.now ?? (() => new Date());
   const maxPerHour = options.maxAttemptsPerHour ?? 30;
+  const examiner = options.examiner ?? null;
 
   async function startCheck(userId: string, campaignId: string, activityId: string): Promise<LearningResponse> {
     const raw = await store.call('learning_start_context', { p_user_id: userId, p_campaign_id: campaignId, p_activity_id: activityId });
@@ -158,11 +180,13 @@ export function createLearningService(store: LearningStore, options: LearningSer
     const ctx = startContextSchema.parse(raw);
     if (ctx.recentAttempts >= maxPerHour) return { status: 429, body: { error: 'You have started a lot of checks this hour. Take a short break and try again.' } };
 
+    const writtenAvailable = ctx.activity.writtenCount > 0 && examiner !== null && (await examiner.available(userId, ctx.activity.writtenCount));
     const at = now();
     const plan = planAttempt(
       {
         campaignStatus: ctx.campaignStatus,
         activity: ctx.activity,
+        writtenAvailable,
         items: ctx.items.map(toItem),
         competencies: ctx.competencies.map(toCompetency),
         preference: ctx.preference,
@@ -192,6 +216,20 @@ export function createLearningService(store: LearningStore, options: LearningSer
     if (raw === null) return { status: 404, body: { error: 'That check was not found.' } };
     const ctx = submitContextSchema.parse(raw);
     const items = ctx.items.map(toItem);
+    if (ctx.attempt.submitted) return { status: 409, body: { error: 'This check has already been submitted.', code: 'already_submitted' } };
+
+    // Written answers go to the Examiner first. If it can't mark them, nothing is recorded and the
+    // player can submit the same answers again.
+    const jobs = items.flatMap((i) => (i.kind === 'written' && needsExaminer(i, answers[i.key]) ? [{ item: i, answer: answers[i.key] as string }] : []));
+    let marking: ExaminerMarking | null = null;
+    if (jobs.length > 0) {
+      if (!examiner) return { status: 503, body: { error: 'Written answers can’t be marked right now: the Examiner isn’t available.', code: 'examiner_unavailable' } };
+      const marked = await examiner.mark(userId, ctx.campaignId, jobs);
+      if (!marked.ok) return { status: marked.status, body: { error: marked.error, code: marked.code } };
+      marking = marked.marking;
+    }
+    const marks = marking ? Object.fromEntries(Object.entries(marking.items).map(([k, j]) => [k, j.mark])) : {};
+
     const at = now();
     const outcome = resolveSubmission(
       {
@@ -206,6 +244,7 @@ export function createLearningService(store: LearningStore, options: LearningSer
       answers,
       at,
       config,
+      marks,
     );
     if (!outcome.ok) return { status: refusalStatus[outcome.code], body: { error: outcome.message, code: outcome.code } };
 
@@ -218,7 +257,20 @@ export function createLearningService(store: LearningStore, options: LearningSer
       given: r.given,
       answer: answerOf(byId.get(r.itemKey)!),
       explanation: byId.get(r.itemKey)!.explanation,
+      ...(r.points ? { written: writtenDetails(byId.get(r.itemKey)!, marking, r.points) } : {}),
     }));
+    // Stored with the attempt for audit: the checked judgement, never the prompt.
+    const markingRecord = marking
+      ? {
+          origin: marking.origin,
+          provider: marking.provider,
+          model: marking.model,
+          items: Object.fromEntries(
+            Object.entries(marking.items).map(([k, j]) => [k, { criteria: j.criteria, confidence: j.confidence, confident: j.mark.confident, feedback: j.feedback, problems: j.problems }]),
+          ),
+        }
+      : null;
+    const counted = outcome.counted;
     const recorded = paidSchema.parse(
       await store.call('learning_record_submission', {
         p_user_id: userId,
@@ -231,7 +283,9 @@ export function createLearningService(store: LearningStore, options: LearningSer
           total: outcome.grade.total,
           score: outcome.grade.score,
           passed: outcome.grade.passed,
-          competencies: outcome.competencies.map((c) => ({
+          counted,
+          marking: markingRecord,
+          competencies: (counted ? outcome.competencies : []).map((c) => ({
             competencyId: c.competencyId,
             stage: c.mastery.stage,
             evidence: c.evidence,
@@ -241,7 +295,7 @@ export function createLearningService(store: LearningStore, options: LearningSer
             lastDemonstratedAt: iso(c.retention.lastDemonstratedAt),
             retentionStrength: retentionStrength(c.retention, config),
           })),
-          weaknesses: outcome.weaknesses.map(({ state: w }) => ({
+          weaknesses: (counted ? outcome.weaknesses : []).map(({ state: w }) => ({
             conceptId: w.concept,
             status: w.status,
             errorCategory: w.errorCategory,
@@ -266,6 +320,8 @@ export function createLearningService(store: LearningStore, options: LearningSer
         total: outcome.grade.total,
         score: outcome.grade.score,
         passed: outcome.grade.passed,
+        counted,
+        examinerOrigin: marking?.origin ?? null,
         results,
         competencies: outcome.competencies.map((c) => ({
           competencyId: c.competencyId,

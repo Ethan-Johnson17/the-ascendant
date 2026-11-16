@@ -540,6 +540,20 @@ Initially, these roles may share one model. The architecture must allow differen
 - **Daily limit:** 30 AI requests per player per day (configurable). When the limit or the shared
   free quota is reached, AI features pause with a clear message; lessons, checks, the Codex and the
   Weakness Bank keep working without AI.
+- **Written questions (decided 2026-11-16):** every existing knowledge check includes one written
+  "explain in your own words" question per attempt, and new **Advanced** checks, made only of written
+  questions, unlock the Advanced stage once a competency is Proficient. The Examiner marks each
+  written answer against a rubric; the game engine, not the AI, adds up the rubric points and
+  decides pass or fail.
+- **Unsure marking:** if the Examiner is not highly confident about any written answer in an
+  attempt, the whole attempt does not count: no pass, fail, XP or Weakness Bank change. The player
+  still sees the feedback and can try again.
+- **Without the Examiner** (no AI set up, or the player's AI limit used up), checks up to Proficient
+  are issued without their written question so learning never stops; Advanced checks wait until the
+  Examiner is available.
+- **Progression Advisor:** the dashboard always shows the game's own next steps (reviews due, weak
+  spots, next lesson or check). An "Explain my plan" button asks the AI for a friendly explanation
+  and uses one of the player's daily AI requests.
 - **The Tutor** answers only from the lesson's own text, Codex entries and checked sources. It may cite
   only sources already in the campaign's source list; any other citation is removed and the claim is
   flagged as unsupported. It says when it does not know rather than guessing.

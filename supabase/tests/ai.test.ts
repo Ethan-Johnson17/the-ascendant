@@ -162,6 +162,7 @@ describe('AI usage records (security)', () => {
     assert.ok(await t.errorAsUser(a.u, `delete from public.ai_requests`));
     assert.ok(await t.errorAsUser(a.u, `select public.ai_reserve_request($1, 'tutor', null, now(), 1000, 1000)`, [a.u]));
     assert.ok(await t.errorAsUser(a.u, `select public.ai_tutor_context($1, $2, $3)`, [a.u, a.campaignId, LESSON]));
+    assert.ok(await t.errorAsUser(a.u, `select public.ai_advisor_context($1, $2, array[$3])`, [a.u, a.campaignId, LESSON]));
   });
 
   it('a request can be finished only once', async () => {
@@ -172,5 +173,61 @@ describe('AI usage records (security)', () => {
       store.call('ai_finish_request', { p_user_id: u, p_request_id: res.requestId, p_status: 'ok', p_origin: 'ai', p_provider: 'p', p_model: 'm', p_input_tokens: 1, p_output_tokens: 1, p_attempts: 1, p_error_kind: null });
     await finish();
     await assert.rejects(finish());
+  });
+});
+
+describe('Progression Advisor (database + service)', () => {
+  const steps = [
+    { kind: 'lesson', activityId: LESSON },
+    { kind: 'check', activityId: `${PILOT}/check-the-land` },
+  ];
+  const advise = (campaignId: string, list: object[] = steps) => ({ action: 'advise', campaignId, steps: list });
+
+  it('explains the engine’s plan with titles from the database, labelled when it is a fixture', async () => {
+    const { u, campaignId } = await newPlayer();
+    const { svc } = serviceWith(createDevelopmentFixtures());
+    const r = await svc.handle(u, advise(campaignId));
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const body = r.body as { origin: string; advice: { summary: string; steps: { activityId: string; why: string }[] } };
+    assert.equal(body.origin, 'fixture');
+    assert.match(body.advice.summary, /Development fixture/);
+    assert.deepEqual(body.advice.steps.map((x) => x.activityId), steps.map((x) => x.activityId));
+    const rows = await logRows(u);
+    assert.equal(rows[0]!.role, 'progression_advisor');
+  });
+
+  it('only sends the AI step kinds and curriculum titles', async () => {
+    const { u, campaignId } = await newPlayer();
+    let seen = '';
+    const spy: AiProvider = {
+      id: 'spy', model: 'spy', origin: 'ai',
+      generate: async (req) => {
+        seen = req.messages.map((m) => m.content).join('\n');
+        return { text: JSON.stringify({ summary: 'A good plan.', steps: [{ step: 1, why: 'Start here.' }, { step: 2, why: 'Then test it.' }] }), usage: { inputTokens: 1, outputTokens: 1 }, model: 'spy', provider: 'spy', origin: 'ai' };
+      },
+    };
+    const r = await serviceWith(spy).svc.handle(u, advise(campaignId));
+    assert.equal(r.status, 200);
+    assert.match(seen, /The land between the rivers/);
+    assert.match(seen, /Check: the land between the rivers/);
+    assert.ok(!seen.includes(campaignId) && !seen.includes(u), 'no ids or player data in the prompt');
+  });
+
+  it('refuses steps that are not in this campaign or don’t match their kind, without using the allowance', async () => {
+    const { u, campaignId } = await newPlayer();
+    const { svc } = serviceWith(createDevelopmentFixtures());
+    assert.equal((await svc.handle(u, advise(campaignId, [{ kind: 'lesson', activityId: 'other/lesson' }]))).status, 422);
+    assert.equal((await svc.handle(u, advise(campaignId, [{ kind: 'lesson', activityId: `${PILOT}/check-the-land` }]))).status, 422);
+    assert.equal((await svc.handle(u, advise(campaignId, [steps[0]!, steps[0]!]))).status, 400);
+    const other = await newPlayer();
+    assert.equal((await svc.handle(other.u, advise(campaignId))).status, 404);
+    assert.equal((await logRows(u)).length, 0);
+  });
+
+  it('does not show an explanation that skips or invents steps', async () => {
+    const { u, campaignId } = await newPlayer();
+    const r = await serviceWith(replying({ summary: 'Do this.', steps: [{ step: 1, why: 'Only the first.' }, { step: 3, why: 'An invented step.' }] })).svc.handle(u, advise(campaignId));
+    assert.equal(r.status, 502);
+    assert.equal((await logRows(u))[0]!.status, 'failed');
   });
 });

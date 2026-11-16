@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 4 Milestone B
+- Written questions: every knowledge check now asks one "explain in your own words" question, marked
+  by the Examiner (AI) against a rubric. You see each point you earned, quoted from your answer.
+- Two new Advanced checks for Mesopotamia (geography, agriculture), made of written questions. They
+  are the only way to reach the Advanced stage.
+- If the Examiner isn't sure how to mark an answer, that attempt doesn't count either way.
+- "Next steps" on the dashboard: what to study next, from your own records. "Explain my plan" asks the
+  Advisor (AI) to explain it.
+- The 30-a-day AI allowance is now shared by the Tutor, the Examiner and the Advisor.
+
 ## Unreleased — Phase 4 Milestone A
 - "Ask the Tutor" on every lesson: answers come only from the lesson and its checked sources, and
   any citation the AI makes up is removed and flagged.
