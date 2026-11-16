@@ -136,12 +136,12 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | The other eight history competencies | Planned — Phase 6 |
 | Unit tests for the screen data builder (`buildCampaignLearning`) | Planned (covered by live walkthrough for now) |
 
-## Phase 4 — AI integration — *In progress (Milestone A built; waiting for the AI key)*
+## Phase 4 — AI integration — *In progress (Milestone A complete)*
 Rules decided by the product owner 2026-11-16 (GAME_DESIGN.md "AI rules"): Groq free tier
 (`gpt-oss-120b`) behind a provider-independent layer; Tutor first; written answers count toward mastery
 only when the Examiner is confident; 30 AI requests per player per day.
 
-### Milestone A — AI foundation and the Tutor — *Built and deployed; real-AI answers not yet seen live*
+### Milestone A — AI foundation and the Tutor — *Built and tested live with Groq (2026-11-16)*
 
 | Item | Status |
 |---|---|
@@ -149,8 +149,9 @@ only when the Examiner is confident; 30 AI requests per player per day.
 | Answer checking: strict format, one repair attempt, retry after timeouts/outages, no invented fallback | Completed, tested |
 | Usage log (`ai_requests`: tokens and outcome, never text) and limits (30 a rolling day, 5 a minute), enforced atomically in the database | Completed, tested offline; applied live |
 | `ai` Edge Function | Deployed; live check passed (signs in, reads usage, reports "not set up" with no key) |
-| Tutor: answers only from the lesson, its Codex entries and checked sources; invented citations removed and flagged; player text treated as data | Completed, tested with fixture and scripted providers. **Not yet tested with a real AI** (needs the Groq key) |
-| "Ask the Tutor" on every lesson | Completed; shows "Not set up yet" until the key is added |
+| Tutor: answers only from the lesson, its Codex entries and checked sources; invented citations removed and flagged; player text treated as data | Completed, tested offline and live with Groq (grounded answer, uncovered question, off-topic, injection attempt) |
+| "Ask the Tutor" on every lesson | Completed, tested live |
+| Log why a reply needed a repair (field names only, no text) | Planned. 2 of 4 live answers needed one |
 
 ### Milestone B — Examiner (written answers) and Progression Advisor — *Not started*
 ### Milestone C — Researcher and AI curricula for any subject; Game Master and Strategist formats — *Not started*

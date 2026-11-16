@@ -30,8 +30,12 @@ migration `20261116000100_ai_requests.sql`; the `ai` Edge Function; `TutorPanel`
 **Problems hit:** a scripted multi-file edit was blocked by a safety check that misread the script,
 and another failed on shell quoting; the same edits were made with the editor and a script file.
 
-**Open:** the product owner adds the Groq key; then test real Tutor answers live, including trick
-questions; Milestones B and C.
+**Live test (after the key was added):** the secret was first saved under the name `Groq`, which the
+function doesn't read; renamed to `AI_API_KEY`. The function now builds its provider on every request,
+so secret changes apply without a redeploy. Four live questions behaved correctly (see TESTING.md).
+Two of the four needed a repair attempt; the cause isn't visible because no text is logged.
+
+**Open:** log the failing field names when a repair happens; Milestones B and C.
 
 ## 2026-11-14 — Phase 3 Milestone B: Mesopotamia lessons and learning screens
 

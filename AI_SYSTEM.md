@@ -1,8 +1,8 @@
 # The Ascendant — AI System
 
 Status: **Phase 4 Milestone A built.** The provider layer, limits, usage log and the Tutor are
-implemented and tested; the `ai` Edge Function is deployed. No real AI is connected until the Groq
-key is added. Examiner and Progression Advisor: Milestone B. Researcher, AI curricula, Game Master
+implemented and tested; the `ai` Edge Function is deployed and answering with Groq
+(`openai/gpt-oss-120b`). Settings are read on every request, so changing a secret needs no redeploy. Examiner and Progression Advisor: Milestone B. Researcher, AI curricula, Game Master
 and Strategist formats: Milestone C.
 
 ## Current setup (Milestone A)

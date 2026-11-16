@@ -13,7 +13,7 @@ const url = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-const service = createAiService(createRpcStore(admin), providerFromEnv((name) => Deno.env.get(name)));
+const store = createRpcStore(admin);
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -40,6 +40,8 @@ Deno.serve(async (req) => {
     return reply(400, { error: 'The request was not understood.' });
   }
 
+  // Settings are read per request, so adding or changing the AI secret applies without a redeploy.
+  const service = createAiService(store, providerFromEnv((name) => Deno.env.get(name)));
   const result = await service.handle(data.user.id, body);
   // Logs carry the outcome only: never the question, the material or the answer.
   if (result.status >= 500) console.error('ai: request failed', { status: result.status, code: (result.body as { code?: unknown }).code });

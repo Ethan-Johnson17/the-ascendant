@@ -182,6 +182,6 @@ importable by server code. No product requirement changes.
 | Learning screens: campaign, lesson, check, Knowledge Codex, Weakness Bank | Implemented, tested live (Phase 3 B) |
 | Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4 C) |
 | AI layer (`src/services/ai/`): provider adapter, fixtures, structured replies, limits | Implemented, tested (Phase 4 A) |
-| `ai` Edge Function + `ai_requests` usage log | Deployed; live with no AI key yet |
-| Tutor ("Ask the Tutor" on lessons) | Implemented, tested with fixture and scripted providers; real AI not yet connected |
+| `ai` Edge Function + `ai_requests` usage log | Deployed; tested live with Groq |
+| Tutor ("Ask the Tutor" on lessons) | Implemented, tested offline and live with Groq |
 | Everything else | Not started |
