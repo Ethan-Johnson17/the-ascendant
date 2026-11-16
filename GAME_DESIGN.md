@@ -526,6 +526,24 @@ Initially, these roles may share one model. The architecture must allow differen
 - Maintain user campaign context.
 - Keep provider credentials on the server.
 
+## AI rules (product owner decision, 2026-11-16)
+
+- **Provider:** Groq's free tier (open model `gpt-oss-120b`) through a provider-independent layer, so
+  switching provider or model is a configuration change. Development and automated tests use
+  deterministic fixture answers, always labelled "Development fixture" and never presented as AI.
+- **Build order:** Tutor first; then the Examiner (written answers) and Progression Advisor; then the
+  Researcher and AI-generated curricula for any subject. Game Master and Strategist formats are built
+  in Phase 4 and used by quests and bosses in Phase 5.
+- **Written answers** count toward mastery exactly like checks (a pass on two different days), but
+  only when the Examiner reports high confidence. A low-confidence marking does not count either way
+  and costs the player nothing.
+- **Daily limit:** 30 AI requests per player per day (configurable). When the limit or the shared
+  free quota is reached, AI features pause with a clear message; lessons, checks, the Codex and the
+  Weakness Bank keep working without AI.
+- **The Tutor** answers only from the lesson's own text, Codex entries and checked sources. It may cite
+  only sources already in the campaign's source list; any other citation is removed and the claim is
+  flagged as unsupported. It says when it does not know rather than guessing.
+
 # 14. Visual Design
 
 Use a premium, modern RPG interface.

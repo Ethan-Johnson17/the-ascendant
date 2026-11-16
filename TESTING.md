@@ -39,6 +39,35 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-16 — Phase 4 Milestone A
+Automated: **164 tests, 164 passing**; typecheck clean.
+
+New in `src/services/ai/ai.test.ts` (17):
+- provider schema simplification and JSON parsing;
+- one repair attempt, and no invented result after a second bad reply;
+- retries after timeouts and outages, but not after rate limits;
+- Groq-format requests with the key sent as a bearer token; error mapping; timeout;
+- provider selection never falls back silently to fixtures;
+- Tutor: delimiters hold against injected text, unverified sources are hidden, invented citations
+  are removed, fixture answers are labelled.
+
+New in `supabase/tests/ai.test.ts` (11), against the real migrations and History lessons:
+- a fixture answer is logged without any text; an invented citation is flagged;
+- the AI cannot change XP or attributes, whatever it says;
+- another player's campaign is refused; "not set up" doesn't use the allowance;
+- the rolling daily limit and the per-minute limit;
+- garbled replies are not shown and are logged as failed; malformed requests are refused;
+- players read only their own usage rows, cannot write them or call the server functions, and a
+  request can be finished only once.
+
+The Deno-safety guard now covers the `ai` function too.
+
+Live: migration applied and `ai` function deployed. On the lesson screen, signed in, the Tutor panel
+calls the live function (200) and shows "Not set up yet" because no AI key is configured.
+
+Not covered yet: real AI answers (needs the Groq key), including trick questions and answer quality
+on each lesson; the limits on the live project (tested offline).
+
 ### 2026-11-14 — Phase 3 Milestone B (live Supabase project)
 Automated: **135 tests, 135 passing**; typecheck clean; build clean. New: the content migration
 matches the authored curriculum; every lesson and question is in the database; no app screen

@@ -9,6 +9,7 @@ import { Notice } from '../components/ui/Notice.tsx';
 import { Badge } from '../components/ui/Badge.tsx';
 import { CertaintyBadge, LearningGate, SampleNote, SourceList } from '../features/learning/LearningUi.tsx';
 import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
+import { TutorPanel } from '../features/ai/TutorPanel.tsx';
 import type { CheckView, LessonView } from '../services/learning/learningData.ts';
 
 export default function LessonPage() {
@@ -79,6 +80,8 @@ export default function LessonPage() {
                 Labels show how settled each part is: established fact, strong scholarly consensus, or debated. Lesson written by the development team; awaiting review.
               </p>
             </Panel>
+
+            <TutorPanel campaignId={campaign!.id} lessonId={lesson.id} sources={data.sources} isSample={isSample} />
 
             <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
 

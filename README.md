@@ -44,7 +44,10 @@ The app needs a Supabase project to sign in — see below.
 6. Deploy the server function that marks checks and records lessons:
    `npx supabase functions deploy learning --use-api --yes`. (`--use-api` builds it on Supabase's
    servers, so Docker isn't needed. Supabase supplies the function's server key itself; nothing to paste.)
-7. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
+7. *(Optional, for the Tutor)* Create a free account at https://console.groq.com and make an API
+   key. In the Supabase dashboard open **Edge Functions → Secrets** and add `AI_API_KEY` with that
+   key. Never put it in `.env.local`. Deploy the function once: `npx supabase functions deploy ai --use-api --yes`.
+8. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.
 
 Never paste the secret (`sb_secret_…`) or `service_role` key, or any AI provider key, into `.env.local`.
 The app refuses a secret key if one is pasted by mistake.

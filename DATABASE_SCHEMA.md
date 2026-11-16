@@ -36,6 +36,20 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 4 Milestone A
+
+Migration `supabase/migrations/20261116000100_ai_requests.sql` (tested offline; applied live).
+
+**`ai_requests`**: one row per AI request: `user_id`, `campaign_id` (set null if the campaign is
+deleted), `role`, `status` (pending / ok / failed), `origin` (ai / fixture), `provider`, `model`,
+`input_tokens`, `output_tokens`, `attempts`, `error_kind`, `created_at`, `finished_at`. No prompts,
+questions or answers are stored. Players can read their own rows; only the server writes.
+
+**Service-role functions:** `ai_tutor_context` (a lesson's sections, the Codex entries it introduces
+and the campaign's sources, only for the player's own campaign), `ai_reserve_request` (counts the
+request against the rolling 24-hour and per-minute limits under a per-player lock, then logs it as
+pending; errors AL001 / AL002), `ai_finish_request` (records the outcome, once), `ai_usage`.
+
 ## Implemented in Phase 3 Milestone A
 
 Migration `supabase/migrations/20261114000300_learning_engine.sql` (tested offline; not yet applied live).
@@ -119,7 +133,7 @@ Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 ### Operations
 | Table | Notes |
 |---|---|
-| `ai_requests` | `user_id`, `role`, `provider`, `model`, `input_tokens`, `output_tokens`, `latency_ms`, `status`, `created_at` — usage log and budget enforcement |
+| `ai_requests` | Implemented in Phase 4 A (see above): usage log and limit enforcement; no prompt or answer text |
 
 ## Changes from CLAUDE.md's starting schema (approved 2026-11-13)
 

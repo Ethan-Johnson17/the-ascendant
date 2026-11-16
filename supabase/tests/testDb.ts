@@ -2,6 +2,7 @@ import { PGlite, type Transaction } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { StoreError, type LearningStore } from '../../src/services/learning/learningService.ts';
 
 /**
  * Offline test database: PGlite (real Postgres in WebAssembly) + a Supabase stand-in + the real
@@ -59,6 +60,25 @@ export async function createTestDb(): Promise<TestDb> {
         return null;
       } catch (err) {
         return err instanceof Error ? err.message : String(err);
+      }
+    },
+  };
+}
+
+/** Calls the server's SQL functions as the service role, the way the Edge Functions do. */
+export function serviceStore(db: TestDb): LearningStore {
+  const isTextArray = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === 'string');
+  const isJson = (v: unknown) => v !== null && typeof v === 'object';
+  return {
+    async call(fn, args) {
+      const names = Object.keys(args);
+      const values = names.map((n) => (isTextArray(args[n]) ? args[n] : isJson(args[n]) ? JSON.stringify(args[n]) : args[n]));
+      const params = names.map((n, i) => `${n} => $${i + 1}${isTextArray(args[n]) ? '::text[]' : isJson(args[n]) ? '::jsonb' : ''}`);
+      try {
+        return await db.asRole('service_role', async (tx) => (await tx.query<{ r: unknown }>(`select public.${fn}(${params.join(', ')}) as r`, values)).rows[0]?.r ?? null);
+      } catch (err) {
+        const e = err as { code?: string; message?: string };
+        throw new StoreError(e.message ?? 'db error', e.code);
       }
     },
   };

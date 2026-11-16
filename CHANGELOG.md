@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Phase 4 Milestone A
+- "Ask the Tutor" on every lesson: answers come only from the lesson and its checked sources, and
+  any citation the AI makes up is removed and flagged.
+- AI layer that works with Groq's free tier (or any compatible provider) and with labelled
+  development fixtures when no AI is connected.
+- AI usage log and limits: 30 Tutor questions per player per day, 5 per minute.
+
 ## Unreleased — Phase 3 Milestone B
 - First real lessons: Ancient Mesopotamia geography and agriculture (4 lessons, 5 knowledge
   checks, 15 Codex entries), each fact tied to a checked source and labelled by certainty.

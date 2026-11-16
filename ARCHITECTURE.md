@@ -180,5 +180,8 @@ importable by server code. No product requirement changes.
 | `learning` Edge Function | Deployed; tested live (lesson, check, retake) |
 | Authored curriculum (`src/content/curricula/`, server-side only) → generated migration | Implemented, tested; Mesopotamia geography + agriculture |
 | Learning screens: campaign, lesson, check, Knowledge Codex, Weakness Bank | Implemented, tested live (Phase 3 B) |
-| Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4) |
+| Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4 C) |
+| AI layer (`src/services/ai/`): provider adapter, fixtures, structured replies, limits | Implemented, tested (Phase 4 A) |
+| `ai` Edge Function + `ai_requests` usage log | Deployed; live with no AI key yet |
+| Tutor ("Ask the Tutor" on lessons) | Implemented, tested with fixture and scripted providers; real AI not yet connected |
 | Everything else | Not started |

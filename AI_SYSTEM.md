@@ -1,6 +1,45 @@
 # The Ascendant — AI System
 
-Status: **Designed in Phase 0, implemented in Phase 4.** No AI calls exist yet.
+Status: **Phase 4 Milestone A built.** The provider layer, limits, usage log and the Tutor are
+implemented and tested; the `ai` Edge Function is deployed. No real AI is connected until the Groq
+key is added. Examiner and Progression Advisor: Milestone B. Researcher, AI curricula, Game Master
+and Strategist formats: Milestone C.
+
+## Current setup (Milestone A)
+
+| Setting (Edge Function secret) | Meaning |
+|---|---|
+| `AI_API_KEY` | The provider key. Without it, AI features say "not set up". |
+| `AI_PROVIDER` | `groq` (default), `openai-compatible`, or `fixture` (labelled development answers) |
+| `AI_BASE_URL` / `AI_MODEL` | Default `https://api.groq.com/openai/v1` and `openai/gpt-oss-120b` |
+| `AI_REASONING_EFFORT` | Default `low` (gpt-oss spends part of its output budget reasoning) |
+
+Code in `src/services/ai/`:
+- `types.ts`, `openAiCompatible.ts`, `fixtureProvider.ts`;
+- `structured.ts` (schema-checked replies);
+- `roles/tutor.ts`, `aiService.ts`, `providerFromEnv.ts`;
+- `aiClient.ts` (browser).
+
+Limits in `config.ts`: 30 requests per player per rolling 24 hours, 5 per minute, 30 s timeout, one
+retry after a timeout or outage, and one repair attempt for a badly formatted reply.
+
+### Tutor
+**Input:**
+- the lesson's sections, with their certainty labels;
+- the Codex entries the lesson introduces;
+- the campaign's verified sources, labelled S1, S2...;
+- up to three earlier turns, and the question.
+
+Material, earlier turns and the question are wrapped in `<material>`, `<earlier>` and `<question>`
+and declared data; closing tags inside them are removed.
+
+**Output:**
+- `status`: answered / partly_covered / not_covered / off_topic;
+- up to five paragraphs, each with source labels;
+- up to three follow-up questions.
+
+Labels are mapped back to source ids; unknown labels are removed and the paragraph is shown as
+unsupported. Conversations are not stored.
 
 ## Roles
 

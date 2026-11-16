@@ -1,5 +1,38 @@
 # Development Log
 
+## 2026-11-16 — Phase 4 Milestone A: AI foundation and the Tutor
+
+**Product owner decisions:** Groq free tier; Tutor first; written answers count only when the
+Examiner is confident; 30 AI requests per player per day. Recorded in GAME_DESIGN.md "AI rules".
+
+**Research (2026-11-15):** Groq's own rate-limit page lists `openai/gpt-oss-120b` on the free plan at
+30 requests/minute, 1,000/day, 8,000 tokens/minute and 200,000 tokens/day, organisation-wide. Its
+data page says inference inputs and outputs are not retained by default. Third-party reports put
+Gemini's free tier as low as 20 requests/day for its main model, and OpenRouter's free models at
+50/day. No local GPU or Ollama on this machine, so local models were ruled out for now.
+
+**Built:** `src/services/ai/` (provider types, OpenAI-compatible adapter, fixture provider, structured
+replies with one repair attempt, `providerFromEnv`, Tutor role, `aiService.ts`, browser `aiClient.ts`);
+migration `20261116000100_ai_requests.sql`; the `ai` Edge Function; `TutorPanel` on the lesson screen.
+
+**Choices:**
+- *Source labels instead of ids.* The model sees only verified sources, as S1, S2... Labels are
+  mapped back after the reply; anything else is removed and the paragraph is flagged unsupported.
+- *Simplified schema for providers.* Length and count limits are removed from the JSON Schema sent
+  to the provider (some strict modes reject them) and enforced by our own zod check instead.
+- *Limits are reserved before the call*, under a per-player database lock, so two quick clicks can't
+  both slip under the limit. Failed requests still count, so retries can't be used to hammer the AI.
+- *No AI configured means "not set up"*, never a silent fixture. Fixtures run only when
+  `AI_PROVIDER=fixture` is set, and every fixture answer says so.
+- *No prompts or answers are stored*: the log keeps role, provider, model, tokens and outcome.
+- The test helper that calls server SQL functions moved to `supabase/tests/testDb.ts` for reuse.
+
+**Problems hit:** a scripted multi-file edit was blocked by a safety check that misread the script,
+and another failed on shell quoting; the same edits were made with the editor and a script file.
+
+**Open:** the product owner adds the Groq key; then test real Tutor answers live, including trick
+questions; Milestones B and C.
+
 ## 2026-11-14 — Phase 3 Milestone B: Mesopotamia lessons and learning screens
 
 **Built:** authored curriculum `src/content/curricula/historyEarlyCivilizations.ts` (server-side
