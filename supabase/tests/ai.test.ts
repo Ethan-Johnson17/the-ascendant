@@ -231,3 +231,95 @@ describe('Progression Advisor (database + service)', () => {
     assert.equal((await logRows(u))[0]!.status, 'failed');
   });
 });
+
+describe('Researcher and further reading (database + service)', () => {
+  const CONCEPT = `${PILOT}/land-between-rivers`;
+  const research = (campaignId: string, conceptId = CONCEPT) => ({ action: 'research', campaignId, conceptId });
+  const bookUrl = 'https://openlibrary.org/search.json?title=The+Sumerians&limit=8&fields=key%2Ctitle%2Cauthor_name%2Cfirst_publish_year%2Cpublisher&author=Samuel+Noah+Kramer';
+  /** A fake web where only Open Library answers; every other address fails to load. */
+  const fakeFetch = async (input: string) => {
+    if (input === bookUrl) return new Response(JSON.stringify({ docs: [{ key: '/works/OL1W', title: 'The Sumerians', author_name: ['Samuel Noah Kramer'], first_publish_year: 1963 }] }), { status: 200 });
+    throw new TypeError('network error');
+  };
+  const suggestion = { author: '', publisher: '', year: 0, url: '', doi: '', why: 'A classic introduction.' };
+  const twoSuggestions = { sources: [
+    { ...suggestion, kind: 'book', title: 'The Sumerians', author: 'Samuel Noah Kramer' },
+    { ...suggestion, kind: 'web', title: 'Invented page', url: 'https://www.metmuseum.org/made-up-page' },
+  ] };
+
+  function researchService(provider: AiProvider | null) {
+    let now = new Date('2026-11-16T10:00:00Z');
+    const svc = createAiService(serviceStore(t), provider, { now: () => now, sleep: async () => {}, research: { fetch: fakeFetch, timeoutMs: 500 } });
+    return { svc, advanceDays: (d: number) => (now = new Date(now.getTime() + d * 86_400_000)) };
+  }
+  const readingRows = (u: string) => t.asUser(u, async (tx) => (await tx.query<Record<string, unknown>>('select * from public.research_results order by title')).rows);
+
+  it('shows only suggestions our own checks confirmed, and keeps them private', async () => {
+    const { u, campaignId } = await newPlayer();
+    const other = await newPlayer();
+    const { svc } = researchService(replying(twoSuggestions));
+    const r = await svc.handle(u, research(campaignId));
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const body = r.body as { results: { title: string; status: string; url: string }[]; suggested: number; hidden: number; origin: string };
+    assert.deepEqual(body.results.map((x) => [x.title, x.status, x.url]), [['The Sumerians', 'verified', 'https://openlibrary.org/works/OL1W']]);
+    assert.deepEqual([body.suggested, body.hidden, body.origin], [2, 1, 'ai']);
+
+    const rows = await readingRows(u);
+    assert.deepEqual(rows.map((x) => [x.title, x.status]), [['Invented page', 'unverified'], ['The Sumerians', 'verified']]);
+    assert.equal((await readingRows(other.u)).length, 0, 'another player sees nothing');
+    const [log] = await logRows(u);
+    assert.deepEqual([log!.role, log!.status, log!.repair_reason], ['researcher', 'ok', null]);
+  });
+
+  it('labels the fixture, records the search, and waits a week before searching again', async () => {
+    const { u, campaignId } = await newPlayer();
+    const { svc, advanceDays } = researchService(createDevelopmentFixtures());
+    const first = await svc.handle(u, research(campaignId));
+    assert.equal(first.status, 200, JSON.stringify(first.body));
+    assert.deepEqual([first.status, (first.body as { origin: string }).origin, (first.body as { results: unknown[] }).results.length], [200, 'fixture', 0]);
+    const runs = await t.asUser(u, async (tx) => (await tx.query('select origin, suggested, verified from public.research_runs')).rows);
+    assert.deepEqual(runs, [{ origin: 'fixture', suggested: 0, verified: 0 }]);
+
+    const again = await svc.handle(u, research(campaignId));
+    assert.deepEqual([again.status, (again.body as { code: string }).code], [429, 'recently_researched']);
+    assert.equal((await logRows(u)).length, 1, 'a refused search is not counted');
+    advanceDays(8);
+    assert.equal((await svc.handle(u, research(campaignId))).status, 200);
+  });
+
+  it('refuses a concept outside the campaign and works without an AI only to say so', async () => {
+    const { u, campaignId } = await newPlayer();
+    assert.equal((await researchService(createDevelopmentFixtures()).svc.handle(u, research(campaignId, 'other-course/thing'))).status, 404);
+    const none = await researchService(null).svc.handle(u, research(campaignId));
+    assert.deepEqual([none.status, (none.body as { code: string }).code], [503, 'not_configured']);
+  });
+
+  it('records why a reply needed repair, as field names only', async () => {
+    const { u, campaignId } = await newPlayer();
+    const replies = [{ sources: [{ ...suggestion, kind: 'book', title: 'The Sumerians', why: '' }] }, twoSuggestions];
+    const provider: AiProvider = {
+      id: 'scripted', model: 'scripted-model', origin: 'ai',
+      generate: async () => ({ text: JSON.stringify(replies.shift()), usage: { inputTokens: 10, outputTokens: 10 }, model: 'scripted-model', provider: 'scripted', origin: 'ai' }),
+    };
+    const r = await researchService(provider).svc.handle(u, research(campaignId));
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const [log] = await logRows(u);
+    assert.equal(log!.repair_reason, 'sources.0.why: too_small');
+  });
+
+  it('never stores a source as verified when a check failed', async () => {
+    const { u, campaignId } = await newPlayer();
+    const bad = [{ kind: 'web', title: 'X', status: 'verified', checks: [{ name: 'page_loaded', passed: false, detail: 'no' }] }];
+    await assert.rejects(serviceStore(t).call('ai_record_research', { p_user_id: u, p_campaign_id: campaignId, p_concept_id: CONCEPT, p_origin: 'ai', p_results: bad }));
+    const empty = [{ kind: 'web', title: 'X', status: 'verified', checks: [] }];
+    await assert.rejects(serviceStore(t).call('ai_record_research', { p_user_id: u, p_campaign_id: campaignId, p_concept_id: CONCEPT, p_origin: 'ai', p_results: empty }));
+  });
+
+  it('players cannot write further reading or call the research functions', async () => {
+    const { u, campaignId } = await newPlayer();
+    assert.ok(await t.errorAsUser(u, `insert into public.research_results (user_id, campaign_id, concept_id, kind, title, status, checks, origin) values ($1, $2, $3, 'web', 'x', 'verified', '[]', 'ai')`, [u, campaignId, CONCEPT]));
+    assert.ok(await t.errorAsUser(u, `insert into public.research_runs (user_id, campaign_id, concept_id, origin, suggested, verified) values ($1, $2, $3, 'ai', 0, 0)`, [u, campaignId, CONCEPT]));
+    assert.ok(await t.errorAsUser(u, `select public.ai_research_context($1, $2, $3)`, [u, campaignId, CONCEPT]));
+    assert.ok(await t.errorAsUser(u, `select public.ai_record_research($1, $2, $3, 'ai', '[]'::jsonb)`, [u, campaignId, CONCEPT]));
+  });
+});

@@ -169,8 +169,16 @@ on request.
 | Check screen: written answer box, Examiner note, rubric feedback, "didn't count" banner | Completed, tested live |
 | Progression Advisor: engine plan on the dashboard ("Next steps"); "Explain my plan" (AI) | Completed, tested offline and live with Groq |
 | Advanced checks taken live | Not yet (no competency is Proficient on the test account) |
-| Log why a reply needed a repair (field names only, no text) | Planned (carried over from A) |
-### Milestone C — Researcher and AI curricula for any subject; Game Master and Strategist formats — *Not started*
+| Log why a reply needed a repair (field names only, no text) | Completed in Milestone C part 1 |
+### Milestone C — Researcher and AI curricula for any subject; Game Master and Strategist formats — *Planned (decisions made 2026-11-16)*
+Decided 2026-11-16: grounding from Wikipedia plus verified extra sources; AI-made subjects use the
+same rules, clearly labelled; building counts against the 30-a-day allowance. Built in three parts:
+
+| Part | Contents | Status |
+|---|---|---|
+| C1 | Researcher ("Find further reading" on Codex entries); server-side source checks (Open Library, Crossref, trusted web pages); repair-reason logging | Completed; tested offline and live with Groq (2026-11-16) |
+| C2 | "Start a new subject": AI outline, then lessons and checks built one at a time from fetched source text; "AI-generated" labels; report-a-mistake | Not started |
+| C3 | Game Master and Strategist reply formats, checks and fixtures (used in Phase 5) | Not started |
 
 ## Phase 5 — Campaigns, quests, and encounters — *Not started*
 ## Phase 6 — First playable campaign: History / Ancient Mesopotamia — *Not started*

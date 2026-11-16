@@ -4,6 +4,7 @@ import { createOpenAiCompatibleProvider } from './openAiCompatible.ts';
 import type { WrittenItem } from '../../engine/learning/curriculum.ts';
 import { fixtureAdvice, type AdvisorStep } from './roles/advisor.ts';
 import { fixtureExaminerJudgement } from './roles/examiner.ts';
+import { fixtureResearch } from './roles/researcher.ts';
 import { fixtureTutorAnswer, tutorMaterialSchema } from './roles/tutor.ts';
 import type { AiProvider } from './types.ts';
 
@@ -14,6 +15,7 @@ export function createDevelopmentFixtures(): AiProvider {
       const hint = req.fixtureHint as { material?: unknown; question?: unknown } | undefined;
       return fixtureTutorAnswer(tutorMaterialSchema.parse(hint?.material), typeof hint?.question === 'string' ? hint.question : '');
     },
+    researcher: () => fixtureResearch(),
     progression_advisor: (req) => fixtureAdvice((req.fixtureHint as { steps?: AdvisorStep[] } | undefined)?.steps ?? []),
     examiner: (req) => {
       // The hint is the server's own already-validated question (keyed by database id).

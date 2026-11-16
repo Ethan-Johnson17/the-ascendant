@@ -28,6 +28,8 @@ export interface FinishMeta {
   readonly attempts: number;
   readonly model: string | null;
   readonly errorKind: string | null;
+  /** Why a repair attempt was needed (field paths and codes only). */
+  readonly repairReason?: string | null;
 }
 
 export function createUsageLog(store: LearningStore, providerId: string | null, config: AiConfig, now: () => Date) {
@@ -74,6 +76,7 @@ export function createUsageLog(store: LearningStore, providerId: string | null, 
       p_output_tokens: meta.usage.outputTokens,
       p_attempts: meta.attempts,
       p_error_kind: meta.errorKind,
+      p_repair_reason: meta.repairReason ?? null,
     });
 
   return { usage, reserve, finish };

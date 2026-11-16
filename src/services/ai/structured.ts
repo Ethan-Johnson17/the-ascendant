@@ -28,6 +28,8 @@ export interface StructuredResult<T> {
   readonly model: string;
   readonly provider: string;
   readonly origin: AiOrigin;
+  /** Why the one repair attempt was needed, or null. Field paths and check codes only. */
+  readonly repairReason: string | null;
 }
 
 export interface StructuredOptions {
@@ -38,6 +40,17 @@ export interface StructuredOptions {
 
 const describeIssues = (e: z.ZodError) =>
   e.issues.slice(0, 5).map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ');
+
+/**
+ * The same problems for the usage log: field paths (array positions included) and zod's issue
+ * codes only, so no text from the reply can end up in the log.
+ */
+export const repairCodes = (e: z.ZodError) =>
+  e.issues
+    .slice(0, 5)
+    .map((i) => `${i.path.map((p) => (typeof p === 'number' ? String(p) : String(p).replace(/[^A-Za-z0-9_]/g, '').slice(0, 40))).join('.') || '(root)'}: ${i.code}`)
+    .join('; ')
+    .slice(0, 300);
 
 /**
  * Calls the provider and accepts the reply only if it parses and passes `schema`.
@@ -69,15 +82,15 @@ export async function runStructured<T>(provider: AiProvider, request: Omit<AiReq
     }
   };
 
-  const check = (text: string): { ok: true; data: T } | { ok: false; problem: string } => {
+  const check = (text: string): { ok: true; data: T } | { ok: false; problem: string; code: string } => {
     let value: unknown;
     try {
       value = parseJsonReply(text);
     } catch {
-      return { ok: false, problem: 'the reply was not valid JSON' };
+      return { ok: false, problem: 'the reply was not valid JSON', code: 'not_json' };
     }
     const parsed = schema.safeParse(value);
-    return parsed.success ? { ok: true, data: parsed.data } : { ok: false, problem: describeIssues(parsed.error) };
+    return parsed.success ? { ok: true, data: parsed.data } : { ok: false, problem: describeIssues(parsed.error), code: repairCodes(parsed.error) };
   };
 
   let reply;
@@ -86,14 +99,15 @@ export async function runStructured<T>(provider: AiProvider, request: Omit<AiReq
   } catch (err) {
     // A provider-side schema rejection (400) also deserves the single repair attempt.
     if (!(err instanceof AiError && err.kind === 'bad_output')) throw err;
+    const reason = 'provider_rejected_format';
     reply = await call([...full.messages, { role: 'user', content: 'Your previous reply could not be used. Reply again with only JSON that matches the required format.' }]);
     const second = check(reply.text);
-    if (second.ok) return { data: second.data, usage, attempts, model: reply.model, provider: reply.provider, origin: reply.origin };
-    throw new AiError('bad_output', 'The AI reply did not match the required format.', usage);
+    if (second.ok) return { data: second.data, usage, attempts, model: reply.model, provider: reply.provider, origin: reply.origin, repairReason: reason };
+    throw new AiError('bad_output', 'The AI reply did not match the required format.', usage, `${reason}; then ${second.code}`.slice(0, 300));
   }
 
   const first = check(reply.text);
-  if (first.ok) return { data: first.data, usage, attempts, model: reply.model, provider: reply.provider, origin: reply.origin };
+  if (first.ok) return { data: first.data, usage, attempts, model: reply.model, provider: reply.provider, origin: reply.origin, repairReason: null };
 
   const repaired = await call([
     ...full.messages,
@@ -101,6 +115,6 @@ export async function runStructured<T>(provider: AiProvider, request: Omit<AiReq
     { role: 'user', content: `That reply did not match the required format (${first.problem}). Reply again with only JSON that matches the format exactly.` },
   ]);
   const second = check(repaired.text);
-  if (second.ok) return { data: second.data, usage, attempts, model: repaired.model, provider: repaired.provider, origin: repaired.origin };
-  throw new AiError('bad_output', 'The AI reply did not match the required format.', usage);
+  if (second.ok) return { data: second.data, usage, attempts, model: repaired.model, provider: repaired.provider, origin: repaired.origin, repairReason: first.code };
+  throw new AiError('bad_output', 'The AI reply did not match the required format.', usage, `${first.code}; then ${second.code}`.slice(0, 300));
 }

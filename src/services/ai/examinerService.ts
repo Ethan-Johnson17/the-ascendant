@@ -80,11 +80,14 @@ export function createExaminer(store: LearningStore, provider: AiProvider | null
         examinerJudgementSchema,
         { transientRetries: config.transientRetries, ...(options.sleep ? { sleep: options.sleep } : {}) },
       );
-      await log.finish(userId, requestId, 'ok', { origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: null });
+      await log.finish(userId, requestId, 'ok', { origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: null, repairReason: result.repairReason });
       return checkJudgement(job.item, job.answer, result.data);
     } catch (err) {
       const kind = err instanceof AiError ? err.kind : 'internal';
-      await log.finish(userId, requestId, 'failed', { origin: provider!.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider!.model, errorKind: kind });
+      await log.finish(userId, requestId, 'failed', {
+        origin: provider!.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider!.model, errorKind: kind,
+        repairReason: err instanceof AiError ? err.repairReason : null,
+      });
       throw err;
     }
   }

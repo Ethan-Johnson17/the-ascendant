@@ -6,6 +6,7 @@ import { Panel } from '../components/ui/Panel.tsx';
 import { Badge, type BadgeTone } from '../components/ui/Badge.tsx';
 import { CampaignPicker, CertaintyBadge, LearningGate, NoCampaigns, SourceList, useChosenCampaign } from '../features/learning/LearningUi.tsx';
 import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
+import { FurtherReadingPanel } from '../features/ai/FurtherReadingPanel.tsx';
 import type { CampaignLearning, CodexEntryView, CodexStatus } from '../services/learning/learningData.ts';
 import { cn } from '../utils/cn.ts';
 
@@ -164,6 +165,7 @@ function Entry({ entry: e, campaignId, expanded, onToggle, onRelated }: { entry:
                 </div>
               )}
               <SourceList citations={e.citations} title="References" />
+              <FurtherReadingPanel campaignId={campaignId} conceptId={e.id} />
               {(e.timesCorrect > 0 || e.timesIncorrect > 0) && (
                 <p className="text-xs text-smoke">
                   Answered correctly {e.timesCorrect}×, incorrectly {e.timesIncorrect}×{e.lastReviewedAt && ` · last practised ${e.lastReviewedAt.toLocaleDateString(undefined, { dateStyle: 'medium' })}`}
