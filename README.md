@@ -2,7 +2,7 @@
 
 An educational RPG in which **your real-world knowledge is the source of your character's power.**
 
-Current stage: **Phase 4, AI integration** (Milestones A and B done: Tutor, Examiner, Progression Advisor). See `ROADMAP.md` for status.
+Current stage: **Phase 4, AI integration** (Milestones A and B done: Tutor, Examiner, Progression Advisor; Milestone C part 1 done: Researcher). See `ROADMAP.md` for status.
 
 ## Running it on your computer (first time)
 
@@ -44,7 +44,7 @@ The app needs a Supabase project to sign in — see below.
 6. Deploy the server function that marks checks and records lessons:
    `npx supabase functions deploy learning --use-api --yes`. (`--use-api` builds it on Supabase's
    servers, so Docker isn't needed. Supabase supplies the function's server key itself; nothing to paste.)
-7. *(Optional, for the AI features: Tutor, Examiner, Advisor)* Create a free account at https://console.groq.com and make an API
+7. *(Optional, for the AI features: Tutor, Examiner, Advisor, Researcher)* Create a free account at https://console.groq.com and make an API
    key. In the Supabase dashboard open **Edge Functions → Secrets** and add `AI_API_KEY` with that
    key. Never put it in `.env.local`. Deploy the function once: `npx supabase functions deploy ai --use-api --yes`.
 8. Restart `npm run dev`. **Settings → System status** should show **Database: Connected**.

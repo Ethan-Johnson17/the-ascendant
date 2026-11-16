@@ -6,6 +6,10 @@ import { createUsageLog } from './usageLog.ts';
 import { AiError, noUsage, type AiProvider } from './types.ts';
 import { buildTutorMessages, checkCitations, tutorAnswerSchema, tutorMaterialSchema, type TutorMaterial } from './roles/tutor.ts';
 import { advisorContextSchema, advisorReplySchema, advisorStepSchema, buildAdvisorMessages, checkAdvice, type AdvisorStep } from './roles/advisor.ts';
+import { buildResearcherMessages, researchContextSchema, researcherReplySchema, toCandidates } from './roles/researcher.ts';
+import { createCatalogues } from '../research/catalogues.ts';
+import type { FetchLike } from '../research/safeFetch.ts';
+import { verifySource } from '../research/verify.ts';
 
 /**
  * The server side of AI features: what the `ai` Edge Function runs for each request.
@@ -37,6 +41,11 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
     /** The engine's plan, as the app computed it. Only kinds and ids: titles come from the database. */
     steps: z.array(advisorStepSchema).min(1).max(3),
   }),
+  z.object({
+    action: z.literal('research'),
+    campaignId: z.uuid(),
+    conceptId: z.string().min(1).max(200),
+  }),
   z.object({ action: z.literal('usage') }),
 ]);
 
@@ -49,6 +58,8 @@ export interface AiServiceOptions {
   readonly now?: () => Date;
   readonly config?: AiConfig;
   readonly sleep?: (ms: number) => Promise<void>;
+  /** How the Researcher's suggestions are checked. Tests pass a fake; the default is the real web. */
+  readonly research?: { readonly fetch?: FetchLike; readonly timeoutMs?: number };
 }
 
 /** Player-facing wording for each failure. Never claims a result the AI didn't give. */
@@ -59,6 +70,16 @@ const failureMessage: Record<AiError['kind'] | 'internal', { status: number; err
   unavailable: { status: 503, error: 'The Tutor can’t be reached right now. Please try again in a moment.' },
   bad_output: { status: 502, error: 'The Tutor’s answer came back garbled, so it wasn’t shown. Please try again or rephrase your question.' },
   refused: { status: 422, error: 'The Tutor couldn’t answer that. Try asking about the lesson in a different way.' },
+  internal: { status: 500, error: 'Something went wrong. Please try again.' },
+};
+
+const researcherFailure: Record<AiError['kind'] | 'internal', { status: number; error: string }> = {
+  not_configured: { status: 503, error: 'The Researcher isn’t set up on this server yet.' },
+  timeout: { status: 504, error: 'The Researcher took too long. Please try again later.' },
+  rate_limited: { status: 503, error: 'The Researcher is resting: the shared free AI allowance is used up for now.' },
+  unavailable: { status: 503, error: 'The Researcher can’t be reached right now. Please try again in a moment.' },
+  bad_output: { status: 502, error: 'The Researcher’s suggestions came back garbled, so none were shown.' },
+  refused: { status: 422, error: 'The Researcher couldn’t suggest anything for this concept.' },
   internal: { status: 500, error: 'Something went wrong. Please try again.' },
 };
 
@@ -113,7 +134,7 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
         { transientRetries: config.transientRetries, ...(options.sleep ? { sleep: options.sleep } : {}) },
       );
       const answer = checkCitations(result.data, material);
-      await finish(userId, reservation.requestId, 'ok', { origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: null });
+      await finish(userId, reservation.requestId, 'ok', { origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: null, repairReason: result.repairReason });
       const used = new Set(answer.paragraphs.flatMap((p) => p.sourceIds));
       return {
         status: 200,
@@ -126,7 +147,10 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       };
     } catch (err) {
       const kind = err instanceof AiError ? err.kind : 'internal';
-      await finish(userId, reservation.requestId, 'failed', { origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind });
+      await finish(userId, reservation.requestId, 'failed', {
+        origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind,
+        repairReason: err instanceof AiError ? err.repairReason : null,
+      });
       if (kind === 'internal') throw err;
       const f = failureMessage[kind];
       return { status: f.status, body: { error: f.error, code: kind } };
@@ -172,7 +196,7 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       );
       const advice = checkAdvice(result.data, steps.length);
       await finish(userId, reservation.requestId, advice ? 'ok' : 'failed', {
-        origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: advice ? null : 'bad_output',
+        origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: advice ? null : 'bad_output', repairReason: result.repairReason,
       });
       if (!advice) return { status: advisorFailure.bad_output.status, body: { error: advisorFailure.bad_output.error, code: 'bad_output' } };
       return {
@@ -185,11 +209,90 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       };
     } catch (err) {
       const kind = err instanceof AiError ? err.kind : 'internal';
-      await finish(userId, reservation.requestId, 'failed', { origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind });
+      await finish(userId, reservation.requestId, 'failed', {
+        origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind,
+        repairReason: err instanceof AiError ? err.repairReason : null,
+      });
       if (kind === 'internal') throw err;
       const f = advisorFailure[kind];
       return { status: f.status, body: { error: f.error, code: kind } };
     }
+  }
+
+  async function research(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'research' }>): Promise<AiResponse> {
+    const raw = await store.call('ai_research_context', { p_user_id: userId, p_campaign_id: req.campaignId, p_concept_id: req.conceptId });
+    if (raw === null) return { status: 404, body: { error: 'That concept was not found in this campaign.' } };
+    const ctx = researchContextSchema.parse(raw);
+    if (ctx.lastResearchAt) {
+      const next = new Date(new Date(ctx.lastResearchAt).getTime() + config.researchCooldownDays * 86_400_000);
+      if (next > now()) {
+        return { status: 429, body: { error: `Further reading for this concept was searched recently. You can search again after ${next.toDateString()}.`, code: 'recently_researched', nextAvailableAt: next.toISOString() } };
+      }
+    }
+    if (!provider) return { status: researcherFailure.not_configured.status, body: { error: researcherFailure.not_configured.error, code: 'not_configured' } };
+
+    const reservation = await log.reserve(userId, 'researcher', req.campaignId);
+    if (!reservation.ok) {
+      if (reservation.code === 'daily_limit') {
+        return { status: 429, body: { error: `You’ve used all ${config.dailyRequestsPerPlayer} AI requests for today. The Codex and its sources still work.`, code: 'daily_limit', usage: await usage(userId) } };
+      }
+      return { status: 429, body: { error: 'That’s a lot of AI requests in one minute. Try again shortly.', code: 'minute_limit' } };
+    }
+    let result;
+    try {
+      result = await runStructured(
+        provider,
+        {
+          role: 'researcher',
+          schemaName: 'researcher_reply',
+          messages: buildResearcherMessages(ctx),
+          maxOutputTokens: config.maxOutputTokens.researcher ?? 1500,
+          temperature: 0,
+          fixtureHint: { concept: ctx.concept },
+        },
+        researcherReplySchema,
+        { transientRetries: config.transientRetries, ...(options.sleep ? { sleep: options.sleep } : {}) },
+      );
+      await finish(userId, reservation.requestId, 'ok', { origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: null, repairReason: result.repairReason });
+    } catch (err) {
+      const kind = err instanceof AiError ? err.kind : 'internal';
+      await finish(userId, reservation.requestId, 'failed', {
+        origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind,
+        repairReason: err instanceof AiError ? err.repairReason : null,
+      });
+      if (kind === 'internal') throw err;
+      const f = researcherFailure[kind];
+      return { status: f.status, body: { error: f.error, code: kind } };
+    }
+
+    // Our own code checks every suggestion; the AI is not involved in deciding what counts.
+    const fetcher: FetchLike = options.research?.fetch ?? ((input, init) => fetch(input, init));
+    const timeoutMs = options.research?.timeoutMs ?? 8000;
+    const catalogues = createCatalogues(fetcher, timeoutMs);
+    const candidates = toCandidates(result.data, ctx.knownSources);
+    const checked = await Promise.all(
+      candidates.map(async (c) => ({ ...(await verifySource(c, [ctx.concept.title], { fetch: fetcher, catalogues, timeoutMs })), why: c.why })),
+    );
+    await store.call('ai_record_research', {
+      p_user_id: userId, p_campaign_id: req.campaignId, p_concept_id: req.conceptId, p_origin: result.origin,
+      p_results: checked.map((s) => ({
+        ...s,
+        title: s.title.slice(0, 300), author: s.author?.slice(0, 300) ?? null, publisher: s.publisher?.slice(0, 200) ?? null,
+        doi: s.doi?.slice(0, 150) ?? null, why: s.why.slice(0, 300),
+        url: s.url && s.url.startsWith('https://') && s.url.length <= 600 ? s.url : null,
+      })),
+    });
+    const verified = checked.filter((s) => s.status === 'verified');
+    return {
+      status: 200,
+      body: {
+        results: verified,
+        suggested: checked.length,
+        hidden: checked.length - verified.length,
+        origin: result.origin,
+        usage: { used: reservation.usedToday, limit: config.dailyRequestsPerPlayer, remaining: Math.max(0, config.dailyRequestsPerPlayer - reservation.usedToday) },
+      },
+    };
   }
 
   async function handle(userId: string, body: unknown): Promise<AiResponse> {
@@ -198,6 +301,7 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
     try {
       if (req.data.action === 'usage') return { status: 200, body: { usage: await usage(userId), configured: provider !== null, origin: provider?.origin ?? null } };
       if (req.data.action === 'advise') return await advise(userId, req.data);
+      if (req.data.action === 'research') return await research(userId, req.data);
       return await askTutor(userId, req.data);
     } catch (err) {
       if (err instanceof z.ZodError) return { status: 500, body: { error: 'The game data came back in an unexpected shape. Please try again later.' } };

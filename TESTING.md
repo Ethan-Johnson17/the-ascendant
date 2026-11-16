@@ -39,6 +39,36 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-16 — Phase 4 Milestone C part 1 (Researcher)
+Automated: **218 tests, 218 passing**; typecheck and production build clean.
+
+New tests (`src/services/research/research.test.ts`, fake web, no network):
+- unsafe addresses refused (http, localhost, IP addresses in several forms, internal names,
+  credentials, odd ports); a redirect to a private address is refused before it is fetched;
+  redirect loops, oversized pages and slow pages stop;
+- requests carry a generic identity and nothing about the player;
+- titles, authors and trusted publishers matched (a look-alike domain is not trusted);
+- web pages: verified only when trusted, loaded, title-matched and on topic (the title alone
+  doesn't count as on topic);
+- books via Open Library and articles via Crossref; a real DOI with the wrong title is rejected;
+- Researcher prompt delimiters can't be closed by curriculum text; known sources and duplicates dropped;
+- repair reasons are field paths and codes only, never reply text.
+
+New database tests (`supabase/tests/ai.test.ts`): only verified suggestions returned; other players
+see nothing; the fixture is labelled; a second search within 7 days is refused and not counted; a
+concept from another course is refused; no AI → "not set up"; the repair reason is stored; a source
+can't be stored as verified with a failed check; players can't write the tables or call the functions.
+
+Live (Groq, test account, 2026-11-16):
+- "A civilization of clay": 4 suggestions, 0 confirmed (an invented British Museum object page that
+  also returned 403, a 404 PDF, an invented DOI, a wrong book title). All hidden, count shown.
+- "The salt-and-silt debate": nothing new beyond the course's own references.
+- After preferring books and articles in the prompt, "Long-distance trade": Kramer, *The Sumerians*
+  (1963), confirmed in Open Library and shown with its checks.
+- Catalogue lookups checked directly with known works: Lloyd, *The Archaeology of Mesopotamia*;
+  Jacobsen & Adams, "Salt and Silt…" (by DOI and by search). A real DOI with a wrong title was rejected.
+- Not yet seen live: a verified web page or article; a repair reason (no reply needed repair).
+
 ### 2026-11-16 — Phase 4 Milestone B
 Automated: **194 tests, 194 passing**; typecheck and production build clean; no rubric text in the
 browser bundle.

@@ -1,9 +1,10 @@
 # The Ascendant — AI System
 
-Status: **Phase 4 Milestones A and B built.** The provider layer, limits, usage log, the Tutor, the
-Examiner and the Progression Advisor are implemented and tested, and run live with Groq
-(`openai/gpt-oss-120b`). Settings are read on every request, so changing a secret needs no redeploy.
-Researcher, AI curricula, Game Master and Strategist formats: Milestone C.
+Status: **Phase 4 Milestones A and B built; Milestone C part 1 built.** The provider layer, limits,
+usage log, the Tutor, the Examiner, the Progression Advisor and the Researcher are implemented and
+tested, and run live with Groq (`openai/gpt-oss-120b`). Settings are read on every request, so
+changing a secret needs no redeploy. AI curricula (C2) and Game Master / Strategist formats (C3): not
+started.
 
 ## Current setup (Milestone A)
 
@@ -72,6 +73,41 @@ the server looks up the curriculum titles (`ai_advisor_context`), so nothing the
 the AI. The reply must explain every step exactly once, in order, or it isn't shown. It may not state
 subject facts or promise rewards.
 
+### Researcher (Milestone C part 1)
+"Find further reading" on an unlocked Codex entry. One AI request per search, and at most one search
+per concept every 7 days (`researchCooldownDays`). The Researcher sees only the curriculum's concept
+title and summary, the course title and the sources the course already cites; nothing the player
+typed. It has no web access, so its suggestions are only candidates (up to 6).
+
+Our own code then checks each one (`src/services/research/`, no AI involved):
+
+| Kind | Checks (all must pass) |
+|---|---|
+| Book | Found in **Open Library** with a matching title (and the author's surname, if given) |
+| Journal article | Found in **Crossref** with a matching title: by DOI if given (a real DOI for a different work fails), else by search |
+| Web page | On the trusted-publisher list (museums, universities, governments, libraries, academic publishers, major encyclopedias); the page loads; its title matches; its body mentions the concept |
+
+Only verified results are shown, as "Further reading", never as lesson citations. The rest are stored
+as `unverified` and only counted ("3 other suggestions couldn't be confirmed and were hidden"). The
+check proves a work exists, not what it says, so the AI's one-line description is labelled
+"Researcher's note (not checked)".
+
+Fetching is server-side and guarded (`safeFetch.ts`): https only, no IP addresses, internal host
+names, credentials or unusual ports; every redirect is re-checked (at most 3); 8-second timeout;
+2 MB limit; a generic User-Agent; only titles, author names and DOIs are sent to the catalogues.
+Known limitation: an Edge Function can't see which IP address a name resolves to, so a public name
+that points at a private address can't be detected. Edge Functions run outside our network, which
+limits the harm.
+
+First live results (2026-11-16, three searches): the AI invented web addresses, a DOI and a book
+title; every one was caught. With books and articles preferred in the prompt, a real book (Kramer,
+*The Sumerians*) was confirmed and shown. Expect many searches to show little or nothing.
+
+### Repair reasons
+When a reply fails its format check and gets its one repair attempt, `ai_requests.repair_reason`
+records why, as field paths and check codes only (for example `sources.0.why: too_small`, `not_json`,
+`provider_rejected_format`). It never contains reply text.
+
 ## Roles
 
 Six roles with separate interfaces, prompts and output schemas. They may share one model at first.
@@ -82,7 +118,7 @@ Six roles with separate interfaces, prompts and output schemas. They may share o
 | Tutor | Objective, codex context, player question | Explanation, examples, cited source IDs | No |
 | Examiner | Rubric, player response | Per-criterion scores, misconceptions, error category, confidence | No — produces *evidence* the engine judges |
 | Strategist | Curriculum, mastery, weaknesses | Scenario / boss phase drafts | No — drafts validated against content schema |
-| Researcher | Topic | Candidate sources with URLs + quoted support | No — sources start `unverified` |
+| Researcher | Concept title and summary | Candidate books, articles and pages | No — our code checks every suggestion; unconfirmed ones are never shown |
 | Progression Advisor | Progress, review schedule | Ranked recommendations | No |
 
 ## Provider abstraction
@@ -122,9 +158,12 @@ model than Game Master without code changes. Providers planned:
 
 - The AI may only cite sources that exist in the campaign's `sources` table, by ID.
 - Citations to unknown IDs are stripped and the claim is flagged as unsupported.
-- New sources proposed by the Researcher stay `unverified` until checked: the URL must resolve and the
-  quoted passage must be found on the page; academic references are checked against a catalogue
-  (e.g. Crossref/OpenLibrary) where possible. Unverified sources are never shown as citations.
+- Sources proposed by the Researcher stay `unverified` until checked (see "Researcher" above):
+  books against Open Library, articles against Crossref, web pages for a trusted publisher, a
+  loading page, a matching title and on-topic text. Unverified sources are never shown. Verified ones
+  are further reading only, not lesson citations. (The plan said the page must contain a quoted
+  claim; the Researcher can't browse, so it has no real quotes to give. That check returns in C2,
+  where lessons are built from fetched page text.)
 - Every lesson claim carries a strength label: established fact, scholarly consensus, competing
   interpretations, disputed, speculation.
 - Retrieved text is untrusted: wrapped in delimiters, instructions inside it are ignored.

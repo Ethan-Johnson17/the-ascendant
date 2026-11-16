@@ -67,12 +67,14 @@ export async function createTestDb(): Promise<TestDb> {
 
 /** Calls the server's SQL functions as the service role, the way the Edge Functions do. */
 export function serviceStore(db: TestDb): LearningStore {
-  const isTextArray = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === 'string');
-  const isJson = (v: unknown) => v !== null && typeof v === 'object';
+  // An empty array has no element type, so it goes untyped and Postgres uses the parameter's own type.
+  const isEmpty = (v: unknown) => Array.isArray(v) && v.length === 0;
+  const isTextArray = (v: unknown) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string');
+  const isJson = (v: unknown) => v !== null && typeof v === 'object' && !isEmpty(v);
   return {
     async call(fn, args) {
       const names = Object.keys(args);
-      const values = names.map((n) => (isTextArray(args[n]) ? args[n] : isJson(args[n]) ? JSON.stringify(args[n]) : args[n]));
+      const values = names.map((n) => (isEmpty(args[n]) ? '[]' : isTextArray(args[n]) ? args[n] : isJson(args[n]) ? JSON.stringify(args[n]) : args[n]));
       const params = names.map((n, i) => `${n} => $${i + 1}${isTextArray(args[n]) ? '::text[]' : isJson(args[n]) ? '::jsonb' : ''}`);
       try {
         return await db.asRole('service_role', async (tx) => (await tx.query<{ r: unknown }>(`select public.${fn}(${params.join(', ')}) as r`, values)).rows[0]?.r ?? null);

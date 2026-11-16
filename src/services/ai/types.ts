@@ -58,6 +58,8 @@ export class AiError extends Error {
     message: string,
     /** Tokens already spent before the failure, so usage logs stay accurate. */
     readonly usage: AiUsage = { inputTokens: 0, outputTokens: 0 },
+    /** Why a repair attempt was needed: field paths and check codes only, never reply text. */
+    readonly repairReason: string | null = null,
   ) {
     super(message);
   }

@@ -146,7 +146,9 @@ importable by server code. No product requirement changes.
   Tested offline in `supabase/tests/security.test.ts`.
 - AI provider keys exist only as Edge Function secrets.
 - Retrieved web/source text is treated as untrusted data: delimited in prompts, never executed as
-  instructions, and stripped of markup before display.
+  instructions, and stripped of markup before display. Source checks fetch only public https
+  addresses (no IP addresses or internal names; every redirect re-checked) with size and time
+  limits; fetched text is compared by our code and is not sent to the AI.
 - Rate limits and per-user daily AI budgets are enforced in Edge Functions (see `AI_SYSTEM.md`).
 
 ## 7. Coding standards
@@ -188,4 +190,5 @@ importable by server code. No product requirement changes.
 | Tutor ("Ask the Tutor" on lessons) | Implemented, tested offline and live with Groq |
 | Examiner (written answers in checks) and Advanced checks | Implemented, tested offline and live with Groq (Phase 4 B) |
 | Progression Advisor ("Next steps" on the dashboard) | Implemented, tested offline and live with Groq (Phase 4 B) |
+| Researcher ("Further reading" on Codex entries) and server-side source checks (`src/services/research/`) | Implemented, tested offline and live with Groq (Phase 4 C1) |
 | Everything else | Not started |

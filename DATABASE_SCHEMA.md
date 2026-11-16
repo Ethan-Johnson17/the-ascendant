@@ -36,6 +36,20 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 4 Milestone C part 1
+
+Migration `supabase/migrations/20261116000400_research.sql` (tested offline; applied live):
+- `ai_requests.repair_reason` (≤ 300 characters; field paths and check codes only). `ai_finish_request`
+  gains an optional `p_repair_reason`.
+- `research_results`: one row per checked suggestion for a player's Codex concept (kind, title,
+  author, publisher, year, https-only url, doi, the AI's note, `verified`/`unverified`, publisher
+  kind, the list of checks, `ai`/`fixture`). A new search replaces the player's rows for that concept.
+- `research_runs`: one row per search (suggested and verified counts), used for the 7-day wait.
+- Both tables: players read their own rows; no player writes.
+- Service-role functions `ai_research_context` (concept, course and known sources; time of the last
+  search) and `ai_record_research` (refuses a concept from another course, more than 6 results, and
+  "verified" with a failed check or no checks).
+
 ## Implemented in Phase 4 Milestone B
 
 Migration `supabase/migrations/20261116000200_written_answers.sql` (tested offline; applied live):

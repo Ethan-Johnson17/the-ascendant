@@ -28,6 +28,39 @@ const adviceReplySchema = z.object({
 });
 export type AdviceReply = z.infer<typeof adviceReplySchema>;
 
+const checkSchema = z.object({ name: z.string(), passed: z.boolean(), detail: z.string() });
+
+/** A suggestion that passed every automated check (the server never returns the others). */
+const readingSchema = z.object({
+  kind: z.enum(['web', 'book', 'article']),
+  title: z.string(),
+  author: z.string().nullable(),
+  publisher: z.string().nullable(),
+  year: z.number().int().nullable(),
+  url: z.string().nullable(),
+  doi: z.string().nullable(),
+  why: z.string().nullable(),
+  status: z.literal('verified'),
+  publisherKind: z.string().nullable(),
+  checks: z.array(checkSchema),
+});
+export type ReadingView = z.infer<typeof readingSchema>;
+
+const researchReplySchema = z.object({
+  results: z.array(readingSchema).max(6),
+  suggested: z.number().int(),
+  hidden: z.number().int(),
+  origin: z.enum(['ai', 'fixture']),
+  usage: usageSchema,
+});
+export type ResearchReply = z.infer<typeof researchReplySchema>;
+
+/** What the Codex shows for one concept: the last search and its verified results. */
+export interface FurtherReading {
+  readonly results: readonly ReadingView[];
+  readonly lastRun: { readonly at: Date; readonly origin: 'ai' | 'fixture'; readonly suggested: number; readonly verified: number } | null;
+}
+
 const statusSchema = z.object({ usage: usageSchema, configured: z.boolean(), origin: z.enum(['ai', 'fixture']).nullable() });
 export type AiStatus = z.infer<typeof statusSchema>;
 
@@ -58,6 +91,26 @@ async function call<T>(db: SupabaseClient, body: Record<string, unknown>, schema
   }
 }
 
+const rowSchema = z.object({
+  kind: z.enum(['web', 'book', 'article']), title: z.string(), author: z.string().nullable(), publisher: z.string().nullable(), year: z.number().int().nullable(),
+  url: z.string().nullable(), doi: z.string().nullable(), why: z.string().nullable(), status: z.literal('verified'), publisher_kind: z.string().nullable(), checks: z.array(checkSchema),
+});
+const runSchema = z.object({ created_at: z.string(), origin: z.enum(['ai', 'fixture']), suggested: z.number().int(), verified: z.number().int() });
+
+/** Reads the player's own further reading for a concept (Row Level Security limits it to them). */
+async function loadFurtherReading(db: SupabaseClient, campaignId: string, conceptId: string): Promise<FurtherReading> {
+  const [rows, runs] = await Promise.all([
+    db.from('research_results').select('kind, title, author, publisher, year, url, doi, why, status, publisher_kind, checks')
+      .eq('campaign_id', campaignId).eq('concept_id', conceptId).eq('status', 'verified').order('created_at'),
+    db.from('research_runs').select('created_at, origin, suggested, verified')
+      .eq('campaign_id', campaignId).eq('concept_id', conceptId).order('created_at', { ascending: false }).limit(1),
+  ]);
+  if (rows.error || runs.error) throw new Error('Couldn’t load further reading.');
+  const results = z.array(rowSchema).parse(rows.data).map(({ publisher_kind, ...r }) => ({ ...r, publisherKind: publisher_kind }));
+  const run = z.array(runSchema).parse(runs.data)[0];
+  return { results, lastRun: run ? { at: new Date(run.created_at), origin: run.origin, suggested: run.suggested, verified: run.verified } : null };
+}
+
 export interface TutorTurnInput {
   readonly question: string;
   readonly answer: string;
@@ -71,6 +124,9 @@ export function createAiClient(db: SupabaseClient) {
     /** Asks the Advisor to explain the engine's plan. Sends only step kinds and activity ids. */
     advise: (campaignId: string, steps: readonly { kind: string; activityId: string }[]) =>
       call(db, { action: 'advise', campaignId, steps: steps.map((s) => ({ kind: s.kind, activityId: s.activityId })) }, adviceReplySchema),
+    /** Asks the Researcher for further reading on one Codex concept; the server checks every suggestion. */
+    research: (campaignId: string, conceptId: string) => call(db, { action: 'research', campaignId, conceptId }, researchReplySchema),
+    furtherReading: (campaignId: string, conceptId: string) => loadFurtherReading(db, campaignId, conceptId),
   };
 }
 export type AiClient = ReturnType<typeof createAiClient>;

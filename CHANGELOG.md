@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Phase 4 Milestone C part 1
+- "Find further reading" on Codex entries: the Researcher (AI) suggests books, articles and museum
+  pages, and the server checks each one against library catalogues or the live page. Only confirmed
+  ones are shown, with how they were checked. One search per idea per week; it uses 1 of your 30
+  daily AI requests.
+- AI logs now record why a reply needed a second try (field names only).
+
 ## Unreleased — Phase 4 Milestone B
 - Written questions: every knowledge check now asks one "explain in your own words" question, marked
   by the Examiner (AI) against a rubric. You see each point you earned, quoted from your answer.

@@ -1,5 +1,34 @@
 # Development Log
 
+## 2026-11-16 — Phase 4 Milestone C part 1: the Researcher and source checks
+
+**Product owner decisions:** grounding from Wikipedia plus verified extra sources; AI-made subjects
+follow the same rules, clearly labelled; building counts against the 30-a-day allowance. Part 1 adds
+"Find further reading" to the Codex.
+
+**Built:**
+- server: `roles/researcher.ts`; `src/services/research/` (`safeFetch.ts`, `catalogues.ts`,
+  `trustedPublishers.ts`, `verify.ts`); the `research` action in `aiService.ts`; repair reasons in
+  `structured.ts` and `usageLog.ts`;
+- database: migration `20261116000400_research.sql`;
+- screen: `FurtherReadingPanel.tsx` inside each unlocked Codex entry.
+
+**Choices:**
+- *Our code decides what counts as verified, not the AI.* The AI suggests; the server checks catalogues
+  and pages; the database refuses "verified" with any failed check.
+- *Title and topic instead of a quoted claim.* The Researcher can't browse, so any quote it gave
+  would be from memory. Checking that the page exists, is from a trusted publisher, has the
+  claimed title and is about the concept is honest about what we know. Quote checks belong to C2,
+  where lessons are written from fetched text.
+- *Books and articles first.* The first live search showed the AI inventing web addresses and museum
+  sites refusing automated visits. Library catalogues are reliable and free, so the prompt now
+  prefers books and articles.
+- *The AI's description is labelled "not checked".* We confirm a book exists, not what is inside it.
+- *Separate `research_runs` table* so the weekly limit works even when nothing was suggested.
+
+**Known limitations:** many searches will show nothing; DNS-rebinding can't be checked from an Edge
+Function; museum sites that block bots can't be confirmed.
+
 ## 2026-11-16 — Phase 4 Milestone B: the Examiner and the Progression Advisor
 
 **Product owner decisions:** written questions both inside existing checks and in new Advanced
