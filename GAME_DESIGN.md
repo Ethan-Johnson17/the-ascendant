@@ -554,6 +554,15 @@ Initially, these roles may share one model. The architecture must allow differen
 - **Progression Advisor:** the dashboard always shows the game's own next steps (reviews due, weak
   spots, next lesson or check). An "Explain my plan" button asks the AI for a friendly explanation
   and uses one of the player's daily AI requests.
+- **New subjects (decided 2026-11-16):** AI-written lessons are grounded in source text the server
+  fetches itself: the relevant Wikipedia article (labelled as an encyclopedia, not an academic or
+  primary source), plus academic, museum or university sources the Researcher finds once the server
+  has verified them. Unverified sources are never cited.
+- **AI-made subjects** follow the same mastery, XP and attribute rules as authored courses. Every
+  AI-written lesson is labelled "AI-generated, not reviewed by a person", and players can report a
+  mistake.
+- **Building a subject** counts against the same 30-a-day AI allowance: about one request for the
+  outline, then about two per lesson (lesson and check), built as the player reaches each lesson.
 - **The Tutor** answers only from the lesson's own text, Codex entries and checked sources. It may cite
   only sources already in the campaign's source list; any other citation is removed and the claim is
   flagged as unsupported. It says when it does not know rather than guessing.
