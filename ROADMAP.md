@@ -98,7 +98,7 @@ Split into two milestones. **A** needs nothing from the product owner; **B** nee
 
 XP is not yet *earned* through play — awards come from server functions when lessons exist (Phase 3).
 
-## Phase 3 — Learning engine — *Built and tested live; awaiting review and merge*
+## Phase 3 — Learning engine — *Complete (merged 2026-11-15, PR #4). Lesson text accepted by the product owner "for now"*
 Curriculum structures, objectives, activities, assessments, evidence-based mastery, adaptive
 difficulty, spaced repetition, Weakness Bank, Knowledge Codex.
 
@@ -118,7 +118,7 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | Database: curricula, Codex, sources, questions (answer keys hidden), attempts (immutable), Weakness Bank | Completed, tested offline — **not yet applied to the live project** |
 | `learning` Edge Function (start check, submit check, complete lesson) | Implemented; logic tested offline through the same service code. **Not yet deployed** (no Deno locally) |
 | Curriculum generation for any subject: interface + labelled fixture | Completed, tested. **Mocked** — AI generator is Phase 4 |
-| Written answers (need AI marking) | Planned — Phase 4 |
+| Written answers (need AI marking) | Completed in Phase 4 Milestone B |
 | Advanced/Expert mastery (need applied evidence) | Planned — Phases 4–5 |
 
 ### Milestone B — content and screens — *Built and tested live (2026-11-14)*
@@ -126,7 +126,7 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | Item | Status |
 |---|---|
 | Learning migration applied to the live project; `learning` Edge Function deployed | Completed, tested live |
-| Mesopotamia lessons: Geography and environment, Agriculture and settlement (4 lessons, 5 checks, 35 questions, 15 Codex entries, 6 checked sources) | Completed. **Awaiting product-owner review** of the lesson text |
+| Mesopotamia lessons: Geography and environment, Agriculture and settlement (4 lessons, 5 checks, 35 questions, 15 Codex entries, 6 checked sources) | Completed. Accepted by the product owner for now (2026-11-15) |
 | Content kept in code, turned into a migration (`npm run content:sql`); a test fails if they drift apart | Completed, tested |
 | Campaign page: curriculum path, locks, review reminders, difficulty nudge, competency matrix | Completed, tested live |
 | Lesson screen with certainty labels and references; Complete lesson | Completed, tested live |
@@ -136,8 +136,41 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | The other eight history competencies | Planned — Phase 6 |
 | Unit tests for the screen data builder (`buildCampaignLearning`) | Planned (covered by live walkthrough for now) |
 
-## Phase 4 — AI integration — *Not started*
-Six roles, provider abstraction, schema validation, retries, context management, citations, limits.
+## Phase 4 — AI integration — *In progress (Milestones A and B complete)*
+Rules decided by the product owner 2026-11-16 (GAME_DESIGN.md "AI rules"): Groq free tier
+(`gpt-oss-120b`) behind a provider-independent layer; Tutor first; written answers count toward mastery
+only when the Examiner is confident; 30 AI requests per player per day.
+
+### Milestone A — AI foundation and the Tutor — *Built and tested live with Groq (2026-11-16)*
+
+| Item | Status |
+|---|---|
+| Provider layer: one OpenAI-compatible adapter (Groq default) + labelled development fixtures | Completed, tested |
+| Answer checking: strict format, one repair attempt, retry after timeouts/outages, no invented fallback | Completed, tested |
+| Usage log (`ai_requests`: tokens and outcome, never text) and limits (30 a rolling day, 5 a minute), enforced atomically in the database | Completed, tested offline; applied live |
+| `ai` Edge Function | Deployed; live check passed (signs in, reads usage, reports "not set up" with no key) |
+| Tutor: answers only from the lesson, its Codex entries and checked sources; invented citations removed and flagged; player text treated as data | Completed, tested offline and live with Groq (grounded answer, uncovered question, off-topic, injection attempt) |
+| "Ask the Tutor" on every lesson | Completed, tested live |
+| Log why a reply needed a repair (field names only, no text) | Planned. 2 of 4 live answers needed one |
+
+### Milestone B — Examiner (written answers) and Progression Advisor — *Built and tested live with Groq (2026-11-16)*
+Decided 2026-11-16: written questions both inside existing checks and in new Advanced checks; an unsure
+mark means the whole attempt doesn't count; the Advisor's plan is always shown, and the AI explains it
+on request.
+
+| Item | Status |
+|---|---|
+| Written questions with rubrics (engine adds up the points; rubric and model answer hidden until marked) | Completed, tested |
+| Examiner role: per-criterion judgement, each "met" must quote the answer, high confidence required | Completed, tested offline and live with Groq |
+| Unsure marking → the attempt is recorded but changes nothing | Completed, tested offline (live: not yet seen) |
+| Without the Examiner: checks up to Proficient drop their written question; Advanced checks wait | Completed, tested offline |
+| Advanced (stage 5) reachable only with confidently marked written work; database enforces it | Completed, tested offline |
+| Mesopotamia: one written question in each of the 5 checks; 2 new Advanced checks (geography, agriculture) | Completed; content version 2 applied live |
+| Check screen: written answer box, Examiner note, rubric feedback, "didn't count" banner | Completed, tested live |
+| Progression Advisor: engine plan on the dashboard ("Next steps"); "Explain my plan" (AI) | Completed, tested offline and live with Groq |
+| Advanced checks taken live | Not yet (no competency is Proficient on the test account) |
+| Log why a reply needed a repair (field names only, no text) | Planned (carried over from A) |
+### Milestone C — Researcher and AI curricula for any subject; Game Master and Strategist formats — *Not started*
 
 ## Phase 5 — Campaigns, quests, and encounters — *Not started*
 ## Phase 6 — First playable campaign: History / Ancient Mesopotamia — *Not started*

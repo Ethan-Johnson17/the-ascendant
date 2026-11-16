@@ -96,7 +96,7 @@ importable by server code. No product requirement changes.
 
 ## 4. Data flow — example: answering an assessment
 
-*Built in Phase 3 Milestone A for self-marked questions; written answers and the Examiner arrive in Phase 4.*
+*Built in Phase 3 Milestone A for self-marked questions; written answers and the Examiner added in Phase 4 Milestone B.*
 
 0. Starting a check: browser calls `POST /functions/v1/learning` `{ action: 'start_check', campaignId, activityId }`.
    The engine picks the questions (difficulty from recent accuracy, weaknesses and the player's
@@ -106,8 +106,10 @@ importable by server code. No product requirement changes.
 3. Function (`supabase/functions/learning` → `src/services/learning/learningService.ts`) loads the
    attempt, the issued questions with their answer keys, and the player's competency state via
    service-role SQL functions (`learning_submit_context`).
-4. Multiple-choice → graded deterministically by the engine. Written answer → **Examiner** role returns
-   a structured evaluation (score per rubric criterion, misconceptions, error category).
+4. Multiple-choice → graded deterministically by the engine. Written answer → **Examiner** role
+   (`src/services/ai/examinerService.ts`) says which rubric criteria are met, quoting the answer, and
+   how confident it is; the server checks the judgement, then the engine adds up the points. If any
+   written answer isn't confidently marked, the whole attempt is recorded as "didn't count".
 5. Evaluation is validated with zod. Invalid → retry once, then fail safely ("evaluation unavailable,
    your answer is saved") — never a guessed grade.
 6. Engine computes: XP award (or none if already awarded), evidence record, mastery change if the
@@ -180,5 +182,10 @@ importable by server code. No product requirement changes.
 | `learning` Edge Function | Deployed; tested live (lesson, check, retake) |
 | Authored curriculum (`src/content/curricula/`, server-side only) → generated migration | Implemented, tested; Mesopotamia geography + agriculture |
 | Learning screens: campaign, lesson, check, Knowledge Codex, Weakness Bank | Implemented, tested live (Phase 3 B) |
-| Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4) |
+| Curriculum generator interface | Implemented; only a labelled fixture generator exists (AI in Phase 4 C) |
+| AI layer (`src/services/ai/`): provider adapter, fixtures, structured replies, limits | Implemented, tested (Phase 4 A) |
+| `ai` Edge Function + `ai_requests` usage log | Deployed; tested live with Groq |
+| Tutor ("Ask the Tutor" on lessons) | Implemented, tested offline and live with Groq |
+| Examiner (written answers in checks) and Advanced checks | Implemented, tested offline and live with Groq (Phase 4 B) |
+| Progression Advisor ("Next steps" on the dashboard) | Implemented, tested offline and live with Groq (Phase 4 B) |
 | Everything else | Not started |

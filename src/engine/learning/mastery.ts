@@ -52,9 +52,11 @@ export function decideMastery(
   currentStage: MasteryStage,
   passTimesForNext: readonly Date[],
   config: LearningConfig = defaultLearningConfig,
+  /** Highest stage this evidence can reach: self-marked checks stop at Proficient, written work at Advanced. */
+  cap: number = config.mastery.maxStageFromChecks,
 ): MasteryDecision {
   const required = config.mastery.passesRequired;
-  if (currentStage >= config.mastery.maxStageFromChecks) {
+  if (currentStage >= cap) {
     return { stage: currentStage, advanced: false, spacedPasses: 0, passesRequired: required, reason: null };
   }
   const spaced = countSpacedPasses(passTimesForNext, config);

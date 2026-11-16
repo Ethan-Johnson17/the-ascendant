@@ -2,12 +2,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { addDays, defaultLearningConfig, HOUR_MS } from './config.ts';
 import { validateCurriculum, type AssessmentItem, type Curriculum } from './curriculum.ts';
-import { gradeAttempt, gradeItem, publicItem } from './grading.ts';
+import { gradeAttempt, gradeItem, publicItem, type WrittenMark } from './grading.ts';
 import { countSpacedPasses, decideMastery } from './mastery.ts';
 import { applyRetentionResult, freshRetention, retentionStatus } from './retention.ts';
 import { applyAnswerToWeakness, reviewPriority, type WeaknessState } from './weakness.ts';
 import { recommendDifficulty, selectItems } from './difficulty.ts';
 import { planAttempt, resolveSubmission, type CompetencyContext, type SubmitContext } from './session.ts';
+import { planNextSteps, type PlanInput } from './nextSteps.ts';
 import { fixtureCurriculum, fixtureCurriculumGenerator } from '../../fixtures/fixtureCurriculumGenerator.ts';
 import { generateCurriculum } from '../../services/curriculum/generator.ts';
 
@@ -251,7 +252,7 @@ describe('a whole check, decided by the engine', () => {
   });
 
   it('refuses locked checks and paused campaigns', () => {
-    const start = { campaignStatus: 'active' as const, activity: { id: 'x', targetStage: 3, questionCount: 1 }, items, competencies: [comp()], preference: 0 as const, weakConcepts: new Set<string>() };
+    const start = { campaignStatus: 'active' as const, activity: { id: 'x', targetStage: 3, questionCount: 1, writtenCount: 0 }, items, competencies: [comp()], preference: 0 as const, weakConcepts: new Set<string>(), writtenAvailable: false };
     assert.deepEqual((planAttempt(start, 's') as { code: string }).code, 'locked');
     assert.deepEqual((planAttempt({ ...start, campaignStatus: 'paused' }, 's') as { code: string }).code, 'campaign_inactive');
     const ok = planAttempt({ ...start, activity: { ...start.activity, targetStage: 2 } }, 's');
@@ -309,5 +310,116 @@ describe('a whole check, decided by the engine', () => {
   it('uses only configured numbers', () => {
     assert.equal(defaultLearningConfig.mastery.passMark, 0.8);
     assert.equal(defaultLearningConfig.weakness.reviewGapsDays.length, 3);
+  });
+});
+
+describe('written answers (Phase 4 B)', () => {
+  const written: AssessmentItem = {
+    key: 'w', concept: 'c', difficulty: 2, kind: 'written', prompt: 'Why did farming need irrigation?', explanation: 'e', errorCategory: 'incomplete_explanation', citations: [],
+    criteria: [
+      { key: 'rain', description: 'Says rainfall was too low for crops', points: 2 },
+      { key: 'canals', description: 'Mentions canals from the rivers', points: 1 },
+    ],
+    passPoints: 2, modelAnswer: 'Rain was too scarce, so farmers dug canals.', maxChars: 1200,
+  };
+  const sure = (met: string[]): WrittenMark => ({ criteriaMet: met, confident: true });
+  const comp = (over: Partial<CompetencyContext> = {}): CompetencyContext => ({
+    competencyId: 'astronomy/foundations', stage: 4, retention: freshRetention, passTimesForNext: [], recentResults: [], openWeaknesses: 0, lastDifficulty: null, ...over,
+  });
+  const ctx = (over: Partial<SubmitContext> = {}): SubmitContext => ({
+    campaignId: 'camp-1', attempt: { id: 'att-1', submitted: false, difficulty: 2 }, activity: { id: 'adv-check', targetStage: 5 },
+    items: [written, { ...written, key: 'w2' }], competencies: [comp()], weaknesses: [],
+    standings: [{ competencyId: 'astronomy/foundations', attribute: 'int', stage: 4 }], ...over,
+  });
+
+  it('the engine adds up rubric points; the Examiner only says which criteria are met', () => {
+    assert.ok(gradeItem(written, 'answer', sure(['rain'])).correct);
+    assert.ok(!gradeItem(written, 'answer', sure(['canals'])).correct);
+    assert.deepEqual(gradeItem(written, 'answer', sure(['rain', 'canals', 'invented'])).points, { earned: 3, required: 2, total: 3 });
+    assert.throws(() => gradeItem(written, 'answer'));
+  });
+
+  it('a blank or over-long answer is simply wrong and needs no Examiner', () => {
+    assert.ok(!gradeItem(written, '   ').correct);
+    assert.ok(!gradeItem(written, 'x'.repeat(1201), sure(['rain'])).correct);
+  });
+
+  it('never shows the rubric or model answer before marking', () => {
+    const shown = JSON.stringify(publicItem(written));
+    assert.ok(!shown.includes('canals') && !shown.includes('scarce') && !shown.includes('passPoints'));
+  });
+
+  it('an unsure mark makes the whole attempt not count: no pass, XP, retention or weakness change', () => {
+    const r = resolveSubmission(ctx(), { w: 'long answer', w2: 'another answer' }, T0, defaultLearningConfig, { w: sure(['rain', 'canals']), w2: { criteriaMet: ['rain'], confident: false } });
+    assert.ok(r.ok && !r.counted && !r.grade.passed);
+    assert.deepEqual(r.xp, []);
+    assert.deepEqual(r.weaknesses, []);
+    assert.equal(r.competencies[0]!.retention, freshRetention);
+    assert.equal(r.competencies[0]!.mastery.stage, 4);
+  });
+
+  it('refuses to mark when a written answer has no Examiner mark yet', () => {
+    const r = resolveSubmission(ctx(), { w: 'long answer', w2: 'another' }, T0, defaultLearningConfig, { w: sure(['rain']) });
+    assert.ok(!r.ok && r.code === 'examiner_unavailable');
+  });
+
+  it('confident written passes on two days can reach Advanced; self-marked checks cannot', () => {
+    const marks = { w: sure(['rain', 'canals']), w2: sure(['rain']) };
+    const r = resolveSubmission(ctx({ competencies: [comp({ passTimesForNext: [hours(-30)] })] }), { w: 'a', w2: 'b' }, T0, defaultLearningConfig, marks);
+    assert.ok(r.ok && r.counted && r.grade.passed && r.competencies[0]!.mastery.stage === 5);
+    const selfMarked = resolveSubmission(
+      ctx({ items: [choice], competencies: [comp({ passTimesForNext: [hours(-30)] })] }), { q: 'a' }, T0,
+    );
+    assert.ok(selfMarked.ok && selfMarked.competencies[0]!.mastery.stage === 4);
+  });
+
+  it('without the Examiner, written questions are left out up to Proficient, and Advanced checks wait', () => {
+    const pool = [choice, { ...choice, key: 'q2' }, written];
+    const start = {
+      campaignStatus: 'active' as const, activity: { id: 'x', targetStage: 2, questionCount: 2, writtenCount: 1 }, items: pool,
+      competencies: [{ ...comp(), stage: 1 as const }], preference: 0 as const, weakConcepts: new Set<string>(), writtenAvailable: false,
+    };
+    const without = planAttempt(start, 's');
+    assert.ok(without.ok && without.items.every((i) => i.kind !== 'written') && without.items.length === 2);
+    const withIt = planAttempt({ ...start, writtenAvailable: true }, 's');
+    assert.ok(withIt.ok && withIt.items.at(-1)!.kind === 'written' && withIt.items.length === 2);
+    const advanced = planAttempt({ ...start, activity: { id: 'y', targetStage: 5, questionCount: 1, writtenCount: 1 }, competencies: [comp()] }, 's');
+    assert.ok(!advanced.ok && advanced.code === 'examiner_unavailable');
+  });
+});
+
+describe('next steps (Progression Advisor plan)', () => {
+  const lesson = (id: string, completed = false) => ({ kind: 'lesson' as const, id, key: id, title: id, completed });
+  const check = (id: string, targetStage: number, over: Partial<{ unlocked: boolean; reviewDue: boolean }> = {}) => ({
+    kind: 'assessment' as const, id, key: id, title: id, competencyIds: ['geo'], targetStage, unlocked: true, reviewDue: false, ...over,
+  });
+  const base: PlanInput = {
+    activities: [lesson('l1', true), check('c2', 2), lesson('l2'), check('c3', 3, { unlocked: false })],
+    competencies: [{ id: 'geo', stage: 1 }],
+    weaknesses: [],
+  };
+
+  it('with nothing due: the next lesson, then the check that moves a competency forward', () => {
+    assert.deepEqual(planNextSteps(base).map((s) => [s.kind, s.activityId]), [['lesson', 'l2'], ['check', 'c2']]);
+  });
+
+  it('puts due reviews first, then due weaknesses (most urgent first), and never repeats an activity', () => {
+    const input: PlanInput = {
+      ...base,
+      activities: [lesson('l1', true), check('c2', 2, { reviewDue: true }), lesson('l2'), check('c2b', 2)],
+      competencies: [{ id: 'geo', stage: 2 }],
+      weaknesses: [
+        { conceptTitle: 'Low', status: 'open', due: true, priority: 1, reviewCheck: { id: 'c2b' } },
+        { conceptTitle: 'High', status: 'open', due: true, priority: 9, reviewCheck: { id: 'c2' } },
+        { conceptTitle: 'Not due', status: 'open', due: false, priority: 99, reviewCheck: { id: 'c2b' } },
+      ],
+    };
+    const steps = planNextSteps(input);
+    assert.deepEqual(steps.map((s) => [s.kind, s.activityId]), [['review', 'c2'], ['weakness', 'c2b'], ['lesson', 'l2']]);
+    assert.equal(steps[1]!.concept, 'Low');
+  });
+
+  it('is empty when everything available is done', () => {
+    assert.deepEqual(planNextSteps({ activities: [lesson('l1', true), check('c3', 3, { unlocked: false })], competencies: [{ id: 'geo', stage: 1 }], weaknesses: [] }), []);
   });
 });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ClipboardCheck, Library, RotateCcw, Sparkles, Target, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, ClipboardCheck, FlaskConical, Library, PenLine, RotateCcw, Sparkles, Target, X } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Panel } from '../components/ui/Panel.tsx';
@@ -80,6 +80,7 @@ export default function CheckPage() {
                 <p className="text-sm text-ash">
                   {phase.check.items.length} questions · {difficultyNames[phase.check.difficulty as Difficulty]} difficulty. Pass mark {Math.round(defaultLearningConfig.mastery.passMark * 100)}%.
                 </p>
+                <WrittenNote count={phase.check.items.filter((i) => i.kind === 'written').length} />
                 {phase.check.items.map((item, i) => (
                   <Panel key={item.key} as="section" tone="raised">
                     <p className="text-xs uppercase tracking-wider text-gold-500">Question {i + 1}</p>
@@ -121,6 +122,7 @@ function allAnswered(items: readonly IssuedItem[], answers: Record<string, Answe
     const a = answers[i.key];
     if (i.kind === 'single_choice') return typeof a === 'string';
     if (i.kind === 'ordering') return Array.isArray(a);
+    if (i.kind === 'written') return typeof a === 'string' && a.trim().length > 0 && a.length <= i.maxChars;
     return !!a && typeof a === 'object' && !Array.isArray(a) && i.left.every((l) => (a as Record<string, string>)[l.key]);
   });
 }
@@ -130,12 +132,32 @@ function AnsweredHint({ items, answers }: { items: readonly IssuedItem[]; answer
   return left > 0 ? <p className="text-sm text-ash" aria-live="polite">{left} question{left > 1 ? 's' : ''} still to answer.</p> : null;
 }
 
+/** Says plainly that written answers are marked by an AI, and what that costs. */
+function WrittenNote({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <Notice tone="info" title="Written answers are marked by the Examiner (AI)">
+      The Examiner checks your {count === 1 ? 'answer' : 'answers'} against a rubric, and the game adds up the points. This uses {count} of your daily AI
+      requests. If the Examiner isn’t sure how to mark an answer, the attempt won’t count either way, and you can simply try again.
+    </Notice>
+  );
+}
+
 function Intro({ check, data, canStart, paused, busy, onStart }: { check: CheckView; data: CampaignLearning; canStart: boolean; paused: boolean; busy: boolean; onStart: () => void }) {
   const comps = data.competencies.filter((c) => check.competencyIds.includes(c.id));
   return (
     <Panel tone="accent">
       <ul className="space-y-2 text-ink">
-        <li>{check.questionCount} questions, chosen for you by the game.</li>
+        <li>
+          {check.questionCount} questions, chosen for you by the game
+          {check.writtenCount > 0 && (check.writtenCount >= check.questionCount ? ', all of them written answers' : `, including ${check.writtenCount} written answer${check.writtenCount > 1 ? 's' : ''}`)}.
+        </li>
+        {check.writtenCount > 0 && (
+          <li>
+            Written answers are marked by the Examiner (AI) against a rubric.{' '}
+            {check.writtenCount < check.questionCount && 'If the Examiner isn’t available, the check is given without them.'}
+          </li>
+        )}
         <li>Score {Math.round(defaultLearningConfig.mastery.passMark * 100)}% or more to pass.</li>
         <li>
           Passing on {defaultLearningConfig.mastery.passesRequired} different days (at least {defaultLearningConfig.mastery.minHoursBetweenPasses} hours apart) raises{' '}
@@ -158,6 +180,28 @@ function Intro({ check, data, canStart, paused, busy, onStart }: { check: CheckV
 }
 
 function ItemInput({ item, value, onChange }: { item: IssuedItem; value: Answer | undefined; onChange: (v: Answer) => void }) {
+  if (item.kind === 'written') {
+    const text = typeof value === 'string' ? value : '';
+    const id = `answer-${item.key}`;
+    return (
+      <div className="grid gap-1.5">
+        <label htmlFor={id} className="flex items-center gap-2 text-sm text-ash">
+          <PenLine className="size-4" aria-hidden /> Your answer, in your own words
+        </label>
+        <textarea
+          id={id}
+          value={text}
+          maxLength={item.maxChars}
+          rows={6}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-h-36 w-full rounded-control border border-iron bg-obsidian px-3 py-2 text-base leading-relaxed text-ink placeholder:text-smoke focus-visible:outline-2 focus-visible:outline-gold-300"
+          placeholder="Two or three clear sentences are enough."
+          aria-describedby={`${id}-count`}
+        />
+        <p id={`${id}-count`} className="text-right text-xs text-smoke">{text.length} / {item.maxChars} characters</p>
+      </div>
+    );
+  }
   if (item.kind === 'single_choice') {
     return (
       <div role="radiogroup" aria-label="Choose one answer" className="grid gap-2">
@@ -230,6 +274,7 @@ function ItemInput({ item, value, onChange }: { item: IssuedItem; value: Answer 
 /** Shows an answer (the player's or the correct one) in words. */
 function describeAnswer(item: IssuedItem, a: Answer | null | undefined): string {
   if (a === null || a === undefined) return 'No answer';
+  if (item.kind === 'written') return typeof a === 'string' && a.trim() ? a : 'No answer';
   if (item.kind === 'single_choice') return item.options.find((o) => o.key === a)?.text ?? 'No answer';
   if (item.kind === 'ordering') {
     const text = new Map(item.entries.map((e) => [e.key, e.text] as const));
@@ -252,27 +297,34 @@ function Result({ data, started, result, answers, campaignId, onRetry }: { data:
     <div className="space-y-6" aria-live="polite">
       <Panel tone="accent">
         <div className="flex flex-wrap items-center gap-3">
-          <Badge tone={result.passed ? 'vital' : 'warning'}>{result.passed ? 'Passed' : 'Not yet'}</Badge>
+          {result.counted ? <Badge tone={result.passed ? 'vital' : 'warning'}>{result.passed ? 'Passed' : 'Not yet'}</Badge> : <Badge tone="warning">Didn’t count</Badge>}
           {result.xp.total > 0 && <Badge tone="gold"><Sparkles className="size-3" aria-hidden />+{result.xp.total} XP</Badge>}
+          {result.examinerOrigin === 'fixture' && <Badge tone="warning"><FlaskConical className="size-3" aria-hidden />Development fixture marking</Badge>}
         </div>
+        {!result.counted && (
+          <Notice tone="warning" className="mt-3" title="This attempt didn’t count">
+            The Examiner wasn’t confident about how to mark a written answer, so this attempt changes nothing: no pass or fail, no XP, and nothing added to
+            your Weakness Bank. You can take the check again.
+          </Notice>
+        )}
         <p className="mt-3 font-display text-4xl font-semibold text-gold-100">{result.correct} / {result.total}</p>
         <p className="text-ash">{Math.round(result.score * 100)}% · pass mark {Math.round(defaultLearningConfig.mastery.passMark * 100)}%</p>
         <ul className="mt-4 space-y-1.5 text-ink">
-          {result.competencies.map((c) => (
+          {result.counted && result.competencies.map((c) => (
             <li key={c.competencyId}>
               {c.advanced ? (
                 <strong className="text-gold-200">{compName(c.competencyId)} rose to {masteryStages[c.stage - 1]}!</strong>
               ) : (
                 <span>
                   {compName(c.competencyId)}: {masteryStages[c.stage - 1]}.{' '}
-                  {c.progress.reason ?? (c.stage >= defaultLearningConfig.mastery.maxStageFromChecks ? 'Higher stages need applied work, coming in later phases.' : '')}
+                  {c.progress.reason ?? capNote(c.stage)}
                 </span>
               )}
               {c.reviewedWhileDue && <span className="text-ash"> Review completed on time.</span>}
             </li>
           ))}
           {result.passed && result.xp.total === 0 && <li className="text-ash">No XP this time: XP is paid for the first pass, and for reviews when they are due.</li>}
-          {!result.passed && <li className="text-ash">No progress lost. Review the explanations below and try again.</li>}
+          {result.counted && !result.passed && <li className="text-ash">No progress lost. Review the explanations below and try again.</li>}
         </ul>
         {(opened.length > 0 || counted.length > 0 || cleared.length > 0) && (
           <div className="mt-4 rounded-control border border-iron bg-obsidian/60 p-3 text-sm">
@@ -297,8 +349,14 @@ function Result({ data, started, result, answers, campaignId, onRetry }: { data:
                 {!r.correct && r.errorCategory && <span className="text-smoke">· {errorCategoryNames[r.errorCategory]}</span>}
               </p>
               <p className="mt-1 font-serif text-lg text-ink">{item.prompt}</p>
-              {!r.correct && <p className="mt-2 text-sm text-ash">Your answer: {describeAnswer(item, answers[r.itemId])}</p>}
-              <p className="mt-1 text-sm text-gold-200">Answer: {describeAnswer(item, r.answer)}</p>
+              {r.written ? (
+                <WrittenReview written={r.written} given={describeAnswer(item, answers[r.itemId])} modelAnswer={typeof r.answer === 'string' ? r.answer : ''} />
+              ) : (
+                <>
+                  {!r.correct && <p className="mt-2 text-sm text-ash">Your answer: {describeAnswer(item, answers[r.itemId])}</p>}
+                  <p className="mt-1 text-sm text-gold-200">Answer: {describeAnswer(item, r.answer)}</p>
+                </>
+              )}
               <p className="mt-2 text-sm text-ink/90">{r.explanation}</p>
             </Panel>
           );
@@ -310,6 +368,50 @@ function Result({ data, started, result, answers, campaignId, onRetry }: { data:
         <Button size="lg" variant="secondary" onClick={onRetry} icon={<RotateCcw className="size-5" aria-hidden />}>Take it again</Button>
         <ButtonLink to={`/codex?campaign=${campaignId}`} size="lg" variant="ghost" icon={<Library className="size-5" aria-hidden />}>Open Codex</ButtonLink>
       </div>
+    </div>
+  );
+}
+
+/** Why a stage didn't move although the check was passed: it's as high as this kind of check goes. */
+function capNote(stage: number): string {
+  if (stage >= defaultLearningConfig.mastery.maxStageFromWritten) return 'Higher stages need applied work, coming in later phases.';
+  if (stage >= defaultLearningConfig.mastery.maxStageFromChecks) return 'Advanced needs this campaign’s Advanced check, which uses written answers.';
+  return '';
+}
+
+type WrittenResult = NonNullable<CheckResult['results'][number]['written']>;
+
+/** The rubric, criterion by criterion, with the Examiner's quotes and feedback. */
+function WrittenReview({ written, given, modelAnswer }: { written: WrittenResult; given: string; modelAnswer: string }) {
+  return (
+    <div className="mt-2 space-y-3 text-sm">
+      <div>
+        <p className="text-ash">Your answer:</p>
+        <p className="mt-1 whitespace-pre-wrap rounded-control border border-iron bg-obsidian/60 p-3 text-ink">{given}</p>
+      </div>
+      {written.marked ? (
+        <div>
+          <p className="text-ash">
+            Marked by the Examiner (AI): {written.earned} of {written.total} points, {written.required} needed.
+            {!written.confident && <span className="text-warning"> The Examiner wasn’t sure about this one.</span>}
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {written.criteria.map((c) => (
+              <li key={c.key} className="flex gap-2">
+                {c.met ? <Check className="mt-0.5 size-4 shrink-0 text-vital" aria-label="Met" /> : <X className="mt-0.5 size-4 shrink-0 text-warning" aria-label="Not met" />}
+                <span className="text-ink">
+                  {c.description} <span className="text-smoke">({c.points} pt{c.points > 1 ? 's' : ''})</span>
+                  {c.met && c.quote && <span className="block text-ash">You wrote: “{c.quote}”</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {written.feedback && <p className="mt-2 text-ink/90">{written.feedback}</p>}
+        </div>
+      ) : (
+        <p className="text-ash">No answer was given, so it wasn’t sent to the Examiner.</p>
+      )}
+      {modelAnswer && <p className="text-gold-200">A good answer: {modelAnswer}</p>}
     </div>
   );
 }

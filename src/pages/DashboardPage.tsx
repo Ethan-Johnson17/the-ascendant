@@ -9,6 +9,7 @@ import { Notice } from '../components/ui/Notice.tsx';
 import { Crest } from '../components/game/Crest.tsx';
 import { AttributeTile } from '../components/game/AttributeTile.tsx';
 import { LevelProgress } from '../features/progression/LevelProgress.tsx';
+import { NextStepsPanel } from '../features/learning/NextStepsPanel.tsx';
 import { attributeIds } from '../engine/character/attributes.ts';
 import { currentCampaign } from '../engine/campaigns/campaigns.ts';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
@@ -55,6 +56,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {current && <NextStepsPanel campaignId={current.id} />}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {/* Current campaign */}

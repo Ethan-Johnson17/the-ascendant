@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * The `learning` Edge Function (Deno) imports this code directly. Every file it reaches must use
+ * The `learning` and `ai` Edge Functions (Deno) import this code directly. Every file it reaches must use
  * only relative `.ts` imports or the packages mapped in supabase/functions/learning/deno.json, and
  * no browser- or Node-only globals.
  */
@@ -33,11 +33,13 @@ function walk(file: string, seen: Set<string>) {
 }
 
 describe('Edge Function code is Deno-safe', () => {
-  it('reaches only pure modules and mapped packages', () => {
-    const seen = new Set<string>();
-    walk(resolve(root, 'supabase/functions/learning/index.ts'), seen);
-    assert.ok(seen.size > 8, 'walked the engine');
-    const map = JSON.parse(readFileSync(resolve(root, 'supabase/functions/learning/deno.json'), 'utf8')) as { imports: Record<string, string> };
-    assert.deepEqual(Object.keys(map.imports).sort(), [...allowedPackages].sort());
-  });
+  for (const fn of ['learning', 'ai']) {
+    it(`${fn}: reaches only pure modules and mapped packages`, () => {
+      const seen = new Set<string>();
+      walk(resolve(root, `supabase/functions/${fn}/index.ts`), seen);
+      assert.ok(seen.size > 4, 'walked the shared code');
+      const map = JSON.parse(readFileSync(resolve(root, `supabase/functions/${fn}/deno.json`), 'utf8')) as { imports: Record<string, string> };
+      assert.deepEqual(Object.keys(map.imports).sort(), [...allowedPackages].sort());
+    });
+  }
 });

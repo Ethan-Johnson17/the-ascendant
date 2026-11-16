@@ -13,6 +13,7 @@ export const issuedItemSchema = z.discriminatedUnion('kind', [
   z.object({ key: z.string(), kind: z.literal('single_choice'), difficulty: z.number(), prompt: z.string(), options: z.array(entry) }),
   z.object({ key: z.string(), kind: z.literal('ordering'), difficulty: z.number(), prompt: z.string(), entries: z.array(entry) }),
   z.object({ key: z.string(), kind: z.literal('matching'), difficulty: z.number(), prompt: z.string(), left: z.array(entry), right: z.array(entry) }),
+  z.object({ key: z.string(), kind: z.literal('written'), difficulty: z.number(), prompt: z.string(), maxChars: z.number().int().min(1) }),
 ]);
 export type IssuedItem = z.infer<typeof issuedItemSchema>;
 
@@ -24,6 +25,10 @@ const resultSchema = z.object({
   total: z.number(),
   score: z.number(),
   passed: z.boolean(),
+  /** False when a written answer couldn't be marked confidently: nothing changed. */
+  counted: z.boolean().default(true),
+  /** 'fixture' when a development stand-in marked written answers; null when none were marked. */
+  examinerOrigin: z.enum(['ai', 'fixture']).nullable().default(null),
   results: z.array(
     z.object({
       itemId: z.string(),
@@ -33,6 +38,17 @@ const resultSchema = z.object({
       given: answerSchema.nullable(),
       answer: answerSchema,
       explanation: z.string(),
+      written: z
+        .object({
+          criteria: z.array(z.object({ key: z.string(), description: z.string(), points: z.number(), met: z.boolean(), quote: z.string() })),
+          earned: z.number(),
+          required: z.number(),
+          total: z.number(),
+          feedback: z.string().nullable(),
+          confident: z.boolean(),
+          marked: z.boolean(),
+        })
+        .optional(),
     }),
   ),
   competencies: z.array(

@@ -36,6 +36,37 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 4 Milestone B
+
+Migration `supabase/migrations/20261116000200_written_answers.sql` (tested offline; applied live):
+- `assessment_items.kind` accepts `written` (rubric and model answer stay in the hidden `definition`).
+- `learning_activities.target_stage` now 2–5; new `written_count` (how many written questions an
+  attempt issues; 0 for lessons, never more than `question_count`).
+- `assessment_attempts.counted` (false when the Examiner wasn't confident; such an attempt can't be
+  passed) and `marking` (the Examiner's checked judgement; no prompt text).
+- `learning_record_submission`: an uncounted attempt may not change mastery, weaknesses, XP,
+  attributes or concept progress; Advanced (stage 5) only from a passed check with written answers
+  and Examiner marking; answered written questions always need marking.
+- `learning_competency_state` ignores uncounted attempts; `learning_start_context` returns `writtenCount`.
+- New service-role function `ai_advisor_context` (curriculum titles for the Advisor's plan).
+
+Content migration `20261116000300_history_pilot_curriculum_v2.sql` (generated): curriculum version 2.
+Applied migrations are never edited, so each content release gets a new generated file.
+
+## Implemented in Phase 4 Milestone A
+
+Migration `supabase/migrations/20261116000100_ai_requests.sql` (tested offline; applied live).
+
+**`ai_requests`**: one row per AI request: `user_id`, `campaign_id` (set null if the campaign is
+deleted), `role`, `status` (pending / ok / failed), `origin` (ai / fixture), `provider`, `model`,
+`input_tokens`, `output_tokens`, `attempts`, `error_kind`, `created_at`, `finished_at`. No prompts,
+questions or answers are stored. Players can read their own rows; only the server writes.
+
+**Service-role functions:** `ai_tutor_context` (a lesson's sections, the Codex entries it introduces
+and the campaign's sources, only for the player's own campaign), `ai_reserve_request` (counts the
+request against the rolling 24-hour and per-minute limits under a per-player lock, then logs it as
+pending; errors AL001 / AL002), `ai_finish_request` (records the outcome, once), `ai_usage`.
+
 ## Implemented in Phase 3 Milestone A
 
 Migration `supabase/migrations/20261114000300_learning_engine.sql` (tested offline; not yet applied live).
@@ -119,7 +150,7 @@ Built on CLAUDE.md Part 5, with five structural changes explained at the end.
 ### Operations
 | Table | Notes |
 |---|---|
-| `ai_requests` | `user_id`, `role`, `provider`, `model`, `input_tokens`, `output_tokens`, `latency_ms`, `status`, `created_at` — usage log and budget enforcement |
+| `ai_requests` | Implemented in Phase 4 A (see above): usage log and limit enforcement; no prompt or answer text |
 
 ## Changes from CLAUDE.md's starting schema (approved 2026-11-13)
 

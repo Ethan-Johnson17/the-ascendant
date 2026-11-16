@@ -1,5 +1,77 @@
 # Development Log
 
+## 2026-11-16 — Phase 4 Milestone B: the Examiner and the Progression Advisor
+
+**Product owner decisions:** written questions both inside existing checks and in new Advanced
+checks; if the Examiner is unsure, the whole attempt doesn't count; the Advisor's plan is always
+shown and the AI explains it on request. Recorded in GAME_DESIGN.md "AI rules".
+
+**Built:**
+- engine: `written` questions with rubrics, "confident" attempts, Advanced cap for written work,
+  `planAttempt` without the Examiner, `nextSteps.ts`;
+- server: `roles/examiner.ts`, `roles/advisor.ts`, `examinerService.ts`, `usageLog.ts` (shared by all
+  roles), the `advise` action;
+- database: migration `20261116000200_written_answers.sql`, content v2;
+- screens: written answers and rubric feedback on the check screen, "Next steps" on the dashboard.
+
+**Choices:**
+- *Quotes as evidence.* Every criterion the Examiner says is met must quote the player's answer, and
+  the quote is checked. This stops the AI crediting things the player never wrote.
+- *The Examiner runs inside the `learning` function*, not the `ai` one, so marking and recording happen
+  in one request and a browser can't submit a mark of its own.
+- *If marking fails, nothing is recorded*, so a provider outage never costs the player an attempt.
+- *Content releases get a new migration file.* The generator used to rewrite the Phase 3 file, which
+  Supabase won't re-apply once applied.
+- *The Advisor never sees free text*: the browser sends step kinds and ids; titles come from the database.
+
+**Problems hit:** the Examiner fixture re-validated questions with the authoring schema, which rejects
+database ids; it now trusts the server's already-validated question. A test word ("fertile") also
+appeared inside "infertile" in a choice option; the test now uses a rubric-only phrase.
+
+**Live test:** see TESTING.md. One finding: a cheating attempt in the answer box was marked 0 of 4
+with *high* confidence, rather than the "low" the prompt asks for. The result is still safe (no
+points), but it counted as a wrong answer and added a Weakness Bank review on the test account.
+
+**Open:** take an Advanced check live once a competency is Proficient; see how often real answers
+get "didn't count"; log repair reasons (field names only).
+
+## 2026-11-16 — Phase 4 Milestone A: AI foundation and the Tutor
+
+**Product owner decisions:** Groq free tier; Tutor first; written answers count only when the
+Examiner is confident; 30 AI requests per player per day. Recorded in GAME_DESIGN.md "AI rules".
+
+**Research (2026-11-15):** Groq's own rate-limit page lists `openai/gpt-oss-120b` on the free plan at
+30 requests/minute, 1,000/day, 8,000 tokens/minute and 200,000 tokens/day, organisation-wide. Its
+data page says inference inputs and outputs are not retained by default. Third-party reports put
+Gemini's free tier as low as 20 requests/day for its main model, and OpenRouter's free models at
+50/day. No local GPU or Ollama on this machine, so local models were ruled out for now.
+
+**Built:** `src/services/ai/` (provider types, OpenAI-compatible adapter, fixture provider, structured
+replies with one repair attempt, `providerFromEnv`, Tutor role, `aiService.ts`, browser `aiClient.ts`);
+migration `20261116000100_ai_requests.sql`; the `ai` Edge Function; `TutorPanel` on the lesson screen.
+
+**Choices:**
+- *Source labels instead of ids.* The model sees only verified sources, as S1, S2... Labels are
+  mapped back after the reply; anything else is removed and the paragraph is flagged unsupported.
+- *Simplified schema for providers.* Length and count limits are removed from the JSON Schema sent
+  to the provider (some strict modes reject them) and enforced by our own zod check instead.
+- *Limits are reserved before the call*, under a per-player database lock, so two quick clicks can't
+  both slip under the limit. Failed requests still count, so retries can't be used to hammer the AI.
+- *No AI configured means "not set up"*, never a silent fixture. Fixtures run only when
+  `AI_PROVIDER=fixture` is set, and every fixture answer says so.
+- *No prompts or answers are stored*: the log keeps role, provider, model, tokens and outcome.
+- The test helper that calls server SQL functions moved to `supabase/tests/testDb.ts` for reuse.
+
+**Problems hit:** a scripted multi-file edit was blocked by a safety check that misread the script,
+and another failed on shell quoting; the same edits were made with the editor and a script file.
+
+**Live test (after the key was added):** the secret was first saved under the name `Groq`, which the
+function doesn't read; renamed to `AI_API_KEY`. The function now builds its provider on every request,
+so secret changes apply without a redeploy. Four live questions behaved correctly (see TESTING.md).
+Two of the four needed a repair attempt; the cause isn't visible because no text is logged.
+
+**Open:** log the failing field names when a repair happens; Milestones B and C.
+
 ## 2026-11-14 — Phase 3 Milestone B: Mesopotamia lessons and learning screens
 
 **Built:** authored curriculum `src/content/curricula/historyEarlyCivilizations.ts` (server-side

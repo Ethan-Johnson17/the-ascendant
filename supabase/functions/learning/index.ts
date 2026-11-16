@@ -1,6 +1,7 @@
 // The Ascendant — `learning` Edge Function (Deno, runs on Supabase).
 //
-// Starts checks, marks submitted answers and records completed lessons for the signed-in player.
+// Starts checks, marks submitted answers (written ones via the Examiner) and records completed
+// lessons for the signed-in player.
 // All rules live in the shared game engine (src/engine/learning); this file only authenticates the
 // caller and wires the engine to the database. The service-role key is provided by Supabase to
 // this function at runtime and never leaves the server.
@@ -8,12 +9,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { createLearningService } from '../../../src/services/learning/learningService.ts';
 import { createRpcStore } from '../../../src/services/learning/rpcStore.ts';
+import { createExaminer } from '../../../src/services/ai/examinerService.ts';
+import { providerFromEnv } from '../../../src/services/ai/providerFromEnv.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-const service = createLearningService(createRpcStore(admin));
+const store = createRpcStore(admin);
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +43,9 @@ Deno.serve(async (req) => {
     return reply(400, { error: 'The request was not understood.' });
   }
 
-  const result = await service.handle(data.user.id, body);
+  // AI settings are read per request, so changing a secret takes effect without a redeploy.
+  const examiner = createExaminer(store, providerFromEnv((name) => Deno.env.get(name)));
+  const result = await createLearningService(store, { examiner }).handle(data.user.id, body);
   if (result.status >= 500) console.error('learning: request failed', { status: result.status });
   return reply(result.status, result.body);
 });

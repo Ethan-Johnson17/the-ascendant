@@ -39,6 +39,7 @@ const rowSchemas = {
       introduces_ids: z.array(z.string()),
       target_stage: z.number().nullable(),
       question_count: z.number().nullable(),
+      written_count: z.number().default(0),
     }),
   ),
   codex: z.array(
@@ -96,7 +97,7 @@ const rowSchemas = {
       resolved_at: ts.nullable(),
     }),
   ),
-  attempts: z.array(z.object({ id: z.string(), activity_id: z.string(), started_at: ts, submitted_at: ts.nullable(), passed: z.boolean().nullable(), score: z.number().nullable() })),
+  attempts: z.array(z.object({ id: z.string(), activity_id: z.string(), started_at: ts, submitted_at: ts.nullable(), passed: z.boolean().nullable(), score: z.number().nullable(), counted: z.boolean().default(true) })),
   campaign: z.object({ difficulty_preference: z.union([z.literal(-1), z.literal(0), z.literal(1)]) }),
 };
 
@@ -159,6 +160,8 @@ export interface CheckView {
   readonly targetStage: number;
   readonly targetStageName: string;
   readonly questionCount: number;
+  /** Questions in each attempt that are written answers, marked by the Examiner (AI). */
+  readonly writtenCount: number;
   readonly unlocked: boolean;
   readonly passes: number;
   readonly bestScore: number | null;
@@ -292,10 +295,11 @@ export function buildCampaignLearning(p: Parsed, now: Date): CampaignLearning {
     } else {
       const target = a.target_stage ?? 2;
       const passes = submitted.filter((t) => t.activity_id === a.id && t.passed);
-      const scores = submitted.filter((t) => t.activity_id === a.id).map((t) => t.score ?? 0);
+      // Attempts that didn't count (unsure marking) say nothing about the player's best.
+      const scores = submitted.filter((t) => t.activity_id === a.id && t.counted).map((t) => t.score ?? 0);
       activities.set(a.id, {
         kind: 'assessment', id: a.id, key: keyOf(a.id), title: a.title, competencyIds: a.competency_ids, targetStage: target,
-        targetStageName: masteryStages[target - 1] ?? '', questionCount: a.question_count ?? 0,
+        targetStageName: masteryStages[target - 1] ?? '', questionCount: a.question_count ?? 0, writtenCount: a.written_count,
         unlocked: a.competency_ids.every((c) => checkUnlocked(stageOf(c), target)),
         passes: passes.length,
         bestScore: scores.length ? Math.max(...scores) : null,
@@ -411,7 +415,7 @@ export async function loadCampaignLearning(db: SupabaseClient, campaign: { id: s
   const cid = campaign.id;
   const results = await Promise.all([
     own(db.from('curriculum_nodes').select('id, parent_id, kind, title, summary, position').eq('template_id', t)),
-    own(db.from('learning_activities').select('id, objective_id, kind, title, position, competency_ids, estimated_minutes, sections, introduces_ids, target_stage, question_count').eq('template_id', t)),
+    own(db.from('learning_activities').select('id, objective_id, kind, title, position, competency_ids, estimated_minutes, sections, introduces_ids, target_stage, question_count, written_count').eq('template_id', t)),
     own(db.from('codex_entries').select('id, title, summary, explanation, examples, applications, related_ids, competency_ids, certainty, citations').eq('template_id', t)),
     own(db.from('sources').select('id, title, author, publisher, url, source_type, publication_date, verification_status, checked_on').eq('template_id', t)),
     own(db.from('competency_definitions').select('id, name, description, attribute').eq('template_id', t).order('id')),
@@ -420,7 +424,7 @@ export async function loadCampaignLearning(db: SupabaseClient, campaign: { id: s
     cid ? own(db.from('activity_completions').select('activity_id, completed_at').eq('campaign_id', cid)) : none,
     cid ? own(db.from('concept_progress').select('concept_id, unlocked_at, last_reviewed_at, times_correct, times_incorrect').eq('campaign_id', cid)) : none,
     cid ? own(db.from('weakness_records').select('concept_id, status, error_category, occurrence_count, correct_reviews, next_review_at, last_mistake_at, last_successful_review, resolved_at').eq('campaign_id', cid)) : none,
-    cid ? own(db.from('assessment_attempts').select('id, activity_id, started_at, submitted_at, passed, score').eq('campaign_id', cid).order('started_at')) : none,
+    cid ? own(db.from('assessment_attempts').select('id, activity_id, started_at, submitted_at, passed, score, counted').eq('campaign_id', cid).order('started_at')) : none,
     cid ? own(db.from('campaigns').select('difficulty_preference').eq('id', cid).single()) : Promise.resolve({ data: { difficulty_preference: 0 }, error: null }),
   ]);
   for (const r of results) if (r.error) throw friendlyDbError(r.error);

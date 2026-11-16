@@ -1,9 +1,9 @@
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCharacterAs, createTestDb, type TestDb } from './testDb.ts';
+import { createCharacterAs, createTestDb, serviceStore, type TestDb } from './testDb.ts';
 import { validateCurriculum } from '../../src/engine/learning/curriculum.ts';
 import { curriculumSql } from '../../src/services/curriculum/curriculumSql.ts';
-import { createLearningService, StoreError, type LearningStore } from '../../src/services/learning/learningService.ts';
+import { createLearningService } from '../../src/services/learning/learningService.ts';
 import { fixtureCurriculum } from '../../src/fixtures/fixtureCurriculumGenerator.ts';
 import { HOUR_MS } from '../../src/engine/learning/config.ts';
 
@@ -19,29 +19,7 @@ const LESSON = `${TEMPLATE}/intro-lesson`;
 
 let t: TestDb;
 
-/** Calls the learning SQL functions as the service role, the way the Edge Function does. */
-function store(db: TestDb): LearningStore {
-  return {
-    async call(fn, args) {
-      const names = Object.keys(args);
-      const values = names.map((n) => {
-        const v = args[n];
-        return Array.isArray(v) && v.every((x) => typeof x === 'string') ? v : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
-      });
-      const params = names.map((n, i) => {
-        const v = args[n];
-        const cast = Array.isArray(v) && v.every((x) => typeof x === 'string') ? '::text[]' : v !== null && typeof v === 'object' ? '::jsonb' : '';
-        return `${n} => $${i + 1}${cast}`;
-      });
-      try {
-        return await db.asRole('service_role', async (tx) => (await tx.query<{ r: unknown }>(`select public.${fn}(${params.join(', ')}) as r`, values)).rows[0]?.r ?? null);
-      } catch (err) {
-        const e = err as { code?: string; message?: string };
-        throw new StoreError(e.message ?? 'db error', e.code);
-      }
-    },
-  };
-}
+const store = serviceStore;
 
 /** A service whose clock the test controls. */
 function serviceAt(start: Date) {

@@ -96,9 +96,26 @@ const matching = z.object({
   /** left key → right key */
   answer: z.record(key, key),
 });
-export const assessmentItemSchema = z.discriminatedUnion('kind', [singleChoice, ordering, matching]);
+const criterion = z.object({ key, description: text(300), points: z.number().int().min(1).max(5) });
+const written = z.object({
+  ...itemBase,
+  kind: z.literal('written'),
+  /**
+   * What a good answer does. The Examiner (AI) says which criteria an answer meets; the engine adds
+   * up their points and compares them with `passPoints`.
+   */
+  criteria: z.array(criterion).min(2).max(6),
+  passPoints: z.number().int().min(1),
+  /** Shown after marking, as an example of a full-marks answer. */
+  modelAnswer: text(1200),
+  maxChars: z.number().int().min(200).max(2000).default(1200),
+});
+export type RubricCriterion = z.infer<typeof criterion>;
+
+export const assessmentItemSchema = z.discriminatedUnion('kind', [singleChoice, ordering, matching, written]);
 export type AssessmentItem = z.infer<typeof assessmentItemSchema>;
-export const itemKinds = ['single_choice', 'ordering', 'matching'] as const;
+export type WrittenItem = Extract<AssessmentItem, { kind: 'written' }>;
+export const itemKinds = ['single_choice', 'ordering', 'matching', 'written'] as const;
 export type ItemKind = (typeof itemKinds)[number];
 
 const lesson = z.object({
@@ -117,10 +134,15 @@ const assessment = z.object({
   kind: z.literal('assessment'),
   title: text(120),
   competencies: z.array(key).min(1),
-  /** The mastery stage this check provides evidence for (2 Apprentice … 4 Proficient). */
-  targetStage: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+  /**
+   * The mastery stage this check provides evidence for (2 Apprentice … 4 Proficient; 5 Advanced
+   * for checks made only of written questions).
+   */
+  targetStage: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   /** Questions issued per attempt, drawn from `items`. */
   questionCount: z.number().int().min(1).max(20),
+  /** How many of the issued questions are written (marked by the Examiner). */
+  writtenCount: z.number().int().min(0).max(5).default(0),
   items: z.array(assessmentItemSchema).min(1).max(60),
 });
 
@@ -216,6 +238,12 @@ function itemIssues(item: AssessmentItem): string[] {
       if (duplicates(pairs.map(([, r]) => r)).length) issues.push('pairs two left entries with the same right entry');
       break;
     }
+    case 'written': {
+      if (duplicates(item.criteria.map((c) => c.key)).length) issues.push('has duplicate criterion keys');
+      const total = item.criteria.reduce((s, c) => s + c.points, 0);
+      if (item.passPoints > total) issues.push(`needs ${item.passPoints} points to pass but its criteria give only ${total}`);
+      break;
+    }
   }
   return issues;
 }
@@ -291,6 +319,18 @@ export function validateCurriculum(input: unknown, templateCompetencies?: readon
     } else {
       if (activity.items.length < activity.questionCount) {
         issues.push(`${where} issues ${activity.questionCount} questions but has only ${activity.items.length}`);
+      }
+      const writtenPool = activity.items.filter((i) => i.kind === 'written').length;
+      const otherPool = activity.items.length - writtenPool;
+      if (activity.writtenCount > activity.questionCount) issues.push(`${where} issues more written questions than questions`);
+      if (writtenPool < activity.writtenCount) issues.push(`${where} issues ${activity.writtenCount} written questions but has only ${writtenPool}`);
+      if (activity.writtenCount === 0 && writtenPool > 0) issues.push(`${where} has written questions but never issues them (writtenCount is 0)`);
+      if (activity.targetStage === 5) {
+        // Advanced is earned with applied work only.
+        if (activity.writtenCount !== activity.questionCount || otherPool > 0) issues.push(`${where} targets Advanced, so every question must be written`);
+      } else if (activity.writtenCount > 0 && otherPool < activity.questionCount) {
+        // Without the Examiner the check is issued with no written question, so it needs enough others.
+        issues.push(`${where} needs at least ${activity.questionCount} non-written questions to work without the Examiner`);
       }
       for (const item of activity.items) {
         const iw = `Question "${item.key}"`;
