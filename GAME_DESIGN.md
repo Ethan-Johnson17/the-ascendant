@@ -476,6 +476,20 @@ The AI evaluates responses and submits structured results. The game engine valid
 
 The AI must not independently award victories or alter character statistics.
 
+## Quest and boss rules (product owner decision, 2026-11-16)
+
+- **Quests come from game templates; the AI adds the story.** The game builds each quest from the
+  course itself (for example "study these lessons and pass their check", "clear weak spots in the
+  Weakness Bank"), with fixed objectives, success conditions and XP. The Game Master narrates it.
+  Quests work for every subject, and without AI.
+- **One boss per course, at the end.** It unlocks when **every skill it tests has reached Apprentice
+  (stage 2)**.
+- **Resolve:** the player starts a boss battle with **3 Resolve** (Dwarves 4). Each wrong answer costs
+  1; at 0 the player is defeated. Getting through every round wins. Race traits and class abilities
+  act on Resolve, rounds and questions as listed in "Race, class and background effects".
+- **After a defeat:** the game creates a **recovery quest** on the exact concepts the player missed.
+  Finishing it allows a retry. No XP, levels, mastery or Codex progress is ever lost.
+
 # 12. Failure and Recovery
 
 Use a hybrid RPG/educational approach.
