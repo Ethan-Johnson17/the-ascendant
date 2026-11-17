@@ -563,6 +563,14 @@ Initially, these roles may share one model. The architecture must allow differen
   mistake.
 - **Building a subject** counts against the same 30-a-day AI allowance: about one request for the
   outline, then about two per lesson (lesson and check), built as the player reaches each lesson.
+- **New-subject courses (decided 2026-11-16):** a first AI-made course is **short: 4 lessons**, each
+  with its knowledge check (about 9 AI requests in all, built as the player goes). The game refuses
+  **harmful topics** (for example weapons, self-harm, hate or sexual content); health, law and money
+  courses are allowed and marked "for learning, not personal advice". **"Report a mistake"** saves the
+  player's report for review and flags the lesson ("A player reported a possible mistake here");
+  nothing is deleted. A player may have **3 AI-made subjects at a time**. A player frees a slot by
+  **closing** a subject, not deleting it: deleting would also remove the XP earned in it, and earned
+  progress is permanent. A closed subject keeps its XP and Codex entries.
 - **The Tutor** answers only from the lesson's own text, Codex entries and checked sources. It may cite
   only sources already in the campaign's source list; any other citation is removed and the claim is
   flagged as unsupported. It says when it does not know rather than guessing.

@@ -61,6 +61,32 @@ export interface FurtherReading {
   readonly lastRun: { readonly at: Date; readonly origin: 'ai' | 'fixture'; readonly suggested: number; readonly verified: number } | null;
 }
 
+const createSubjectReplySchema = z.object({
+  templateId: z.string(),
+  campaignId: z.string(),
+  title: z.string(),
+  origin: z.enum(['ai', 'fixture']),
+  adviceArea: z.enum(['none', 'health', 'law', 'money']),
+  usage: usageSchema,
+});
+export type CreateSubjectReply = z.infer<typeof createSubjectReplySchema>;
+
+const buildLessonReplySchema = z.object({
+  lessonKey: z.string(),
+  activityId: z.string(),
+  origin: z.enum(['ai', 'fixture']),
+  droppedParts: z.number().int(),
+  droppedQuestions: z.number().int(),
+  usage: usageSchema,
+});
+export type BuildLessonReply = z.infer<typeof buildLessonReplySchema>;
+
+export interface NewSubjectRequest {
+  readonly subject: string;
+  readonly objective: string;
+  readonly startingProficiency: 'none' | 'beginner' | 'intermediate' | 'advanced';
+}
+
 const statusSchema = z.object({ usage: usageSchema, configured: z.boolean(), origin: z.enum(['ai', 'fixture']).nullable() });
 export type AiStatus = z.infer<typeof statusSchema>;
 
@@ -127,6 +153,10 @@ export function createAiClient(db: SupabaseClient) {
     /** Asks the Researcher for further reading on one Codex concept; the server checks every suggestion. */
     research: (campaignId: string, conceptId: string) => call(db, { action: 'research', campaignId, conceptId }, researchReplySchema),
     furtherReading: (campaignId: string, conceptId: string) => loadFurtherReading(db, campaignId, conceptId),
+    /** Plans a new subject (1 AI request) and starts its campaign. */
+    createSubject: (request: NewSubjectRequest) => call(db, { action: 'create_subject', request }, createSubjectReplySchema),
+    /** Builds the next lesson and its check of one of the player's subjects (2 AI requests). */
+    buildLesson: (templateId: string) => call(db, { action: 'build_lesson', templateId }, buildLessonReplySchema),
   };
 }
 export type AiClient = ReturnType<typeof createAiClient>;

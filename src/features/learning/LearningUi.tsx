@@ -11,7 +11,7 @@ import { Notice } from '../../components/ui/Notice.tsx';
 import { PageFallback } from '../../components/ui/PageFallback.tsx';
 import { cn } from '../../utils/cn.ts';
 import { useGame } from '../../app/GameProvider.tsx';
-import { findTemplate } from '../../content/campaigns/catalog.ts';
+import { useCourses } from '../subjects/CoursesProvider.tsx';
 import type { PlayerCampaign } from '../../engine/campaigns/campaigns.ts';
 
 /** Six pips, filled up to the current mastery stage. */
@@ -120,6 +120,7 @@ export function useChosenCampaign() {
 
 /** A campaign switcher, shown only when the player has more than one campaign. */
 export function CampaignPicker({ campaigns, chosenId, onChoose }: { campaigns: readonly PlayerCampaign[]; chosenId: string; onChoose: (id: string) => void }) {
+  const { courseInfo } = useCourses();
   if (campaigns.length < 2) return null;
   return (
     <label className="grid gap-1.5 text-sm text-ash sm:max-w-sm">
@@ -127,7 +128,7 @@ export function CampaignPicker({ campaigns, chosenId, onChoose }: { campaigns: r
       <select value={chosenId} onChange={(e) => onChoose(e.target.value)} className="min-h-11 rounded-control border border-iron bg-obsidian px-3 text-ink focus-visible:outline-2 focus-visible:outline-gold-300">
         {campaigns.map((c) => (
           <option key={c.id} value={c.id}>
-            {findTemplate(c.templateId)?.title ?? 'Campaign'}{c.status === 'paused' ? ' (paused)' : ''}
+            {courseInfo(c.templateId)?.title ?? 'Campaign'}{c.status === 'paused' ? ' (paused)' : ''}
           </option>
         ))}
       </select>

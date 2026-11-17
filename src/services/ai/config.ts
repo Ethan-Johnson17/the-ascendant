@@ -12,6 +12,16 @@ export interface AiConfig {
   readonly maxOutputTokens: Readonly<Partial<Record<AiRole, number>>>;
   /** Days before the same concept's further reading can be searched again. */
   readonly researchCooldownDays: number;
+  /** "Start a new subject" (GAME_DESIGN.md "New-subject courses"). */
+  readonly courseBuilder: {
+    /** AI-made subjects a player may have open (not closed) at once. */
+    readonly maxOpenSubjects: number;
+    /** How much of the Wikipedia article is sent with a lesson request (characters). */
+    readonly articleChars: number;
+    readonly outlineTokens: number;
+    readonly lessonTokens: number;
+    readonly checkTokens: number;
+  };
   readonly tutor: {
     readonly maxQuestionChars: number;
     /** Earlier question/answer pairs sent back for context. */
@@ -28,6 +38,8 @@ export const defaultAiConfig: AiConfig = {
   // Reasoning models spend part of this budget thinking before they answer.
   maxOutputTokens: { tutor: 2000, examiner: 1500, progression_advisor: 1200, researcher: 1500 },
   researchCooldownDays: 7,
+  // Groq's free plan allows 8,000 tokens a minute in total, so a lesson request stays well under it.
+  courseBuilder: { maxOpenSubjects: 3, articleChars: 9000, outlineTokens: 2500, lessonTokens: 3500, checkTokens: 2500 },
   tutor: { maxQuestionChars: 500, maxHistoryTurns: 3, maxHistoryChars: 1500 },
 };
 

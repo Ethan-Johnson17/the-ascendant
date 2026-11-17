@@ -1,3 +1,4 @@
+import { CoursesProvider } from '../features/subjects/CoursesProvider.tsx';
 import { lazy, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthProvider.tsx';
@@ -89,6 +90,7 @@ export function App() {
     <ErrorBoundary>
       <AuthProvider>
         <GameProvider>
+          <CoursesProvider>
           <BrowserRouter>
             <Routes>
               <Route element={<FocusLayout />}>
@@ -114,6 +116,7 @@ export function App() {
               </Route>
             </Routes>
           </BrowserRouter>
+          </CoursesProvider>
         </GameProvider>
       </AuthProvider>
     </ErrorBoundary>

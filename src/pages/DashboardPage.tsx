@@ -14,18 +14,19 @@ import { attributeIds } from '../engine/character/attributes.ts';
 import { currentCampaign } from '../engine/campaigns/campaigns.ts';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { findBackground, findClass, findRace } from '../content/character/options.ts';
-import { findTemplate } from '../content/campaigns/catalog.ts';
+import { useCourses } from '../features/subjects/CoursesProvider.tsx';
 import { cn } from '../utils/cn.ts';
 
 export default function DashboardPage() {
   const { player, pauseCampaign } = useGame();
+  const { courseInfo } = useCourses();
   const [pauseError, setPauseError] = useState<string | null>(null);
   const [pausing, setPausing] = useState(false);
   const character = player.character;
   if (!character) return null; // guarded by the router
   const cls = findClass(character.classId);
   const current = currentCampaign(player.campaigns);
-  const template = current ? findTemplate(current.templateId) : undefined;
+  const template = current ? courseInfo(current.templateId) : null;
   const otherCount = player.campaigns.length - (current ? 1 : 0);
 
   const road = [
