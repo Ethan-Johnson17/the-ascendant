@@ -571,6 +571,11 @@ Initially, these roles may share one model. The architecture must allow differen
   nothing is deleted. A player may have **3 AI-made subjects at a time**. A player frees a slot by
   **closing** a subject, not deleting it: deleting would also remove the XP earned in it, and earned
   progress is permanent. A closed subject keeps its XP and Codex entries.
+- **Boss questions (decided 2026-11-16):** the Strategist (AI) builds a boss only from questions the
+  player's course already has, which have already passed the game's checks. It chooses which
+  questions, their order and the story around them; it never writes new questions or answer keys.
+  The Game Master (AI) narrates scenes and voices characters only; it never awards XP, marks answers
+  or decides who wins.
 - **The Tutor** answers only from the lesson's own text, Codex entries and checked sources. It may cite
   only sources already in the campaign's source list; any other citation is removed and the claim is
   flagged as unsupported. It says when it does not know rather than guessing.
