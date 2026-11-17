@@ -22,6 +22,8 @@ export interface AiConfig {
     readonly lessonTokens: number;
     readonly checkTokens: number;
   };
+  /** The Game Master's scenes (groundwork for quests in Phase 5). */
+  readonly gameMaster: { readonly maxMessageChars: number; readonly maxHistoryTurns: number };
   readonly tutor: {
     readonly maxQuestionChars: number;
     /** Earlier question/answer pairs sent back for context. */
@@ -36,10 +38,11 @@ export const defaultAiConfig: AiConfig = {
   timeoutMs: 30_000,
   transientRetries: 1,
   // Reasoning models spend part of this budget thinking before they answer.
-  maxOutputTokens: { tutor: 2000, examiner: 1500, progression_advisor: 1200, researcher: 1500 },
+  maxOutputTokens: { tutor: 2000, examiner: 1500, progression_advisor: 1200, researcher: 1500, game_master: 1500, strategist: 2500 },
   researchCooldownDays: 7,
   // Groq's free plan allows 8,000 tokens a minute in total, so a lesson request stays well under it.
   courseBuilder: { maxOpenSubjects: 3, articleChars: 9000, outlineTokens: 2500, lessonTokens: 3500, checkTokens: 2500 },
+  gameMaster: { maxMessageChars: 300, maxHistoryTurns: 2 },
   tutor: { maxQuestionChars: 500, maxHistoryTurns: 3, maxHistoryChars: 1500 },
 };
 

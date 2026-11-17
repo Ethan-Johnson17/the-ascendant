@@ -117,7 +117,7 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | XP: first lesson completion, first check pass, due retention reviews only | Completed, tested |
 | Database: curricula, Codex, sources, questions (answer keys hidden), attempts (immutable), Weakness Bank | Completed, tested offline — **not yet applied to the live project** |
 | `learning` Edge Function (start check, submit check, complete lesson) | Implemented; logic tested offline through the same service code. **Not yet deployed** (no Deno locally) |
-| Curriculum generation for any subject: interface + labelled fixture | Completed, tested. **Mocked** — AI generator is Phase 4 |
+| Curriculum generation for any subject: interface + labelled fixture | Completed, tested. AI-made subjects arrived in Phase 4 C2 (Course Builder) |
 | Written answers (need AI marking) | Completed in Phase 4 Milestone B |
 | Advanced/Expert mastery (need applied evidence) | Planned — Phases 4–5 |
 
@@ -136,7 +136,7 @@ Rules decided by the product owner 2026-11-14 (GAME_DESIGN.md §5 "Learning rule
 | The other eight history competencies | Planned — Phase 6 |
 | Unit tests for the screen data builder (`buildCampaignLearning`) | Planned (covered by live walkthrough for now) |
 
-## Phase 4 — AI integration — *In progress (Milestones A and B complete)*
+## Phase 4 — AI integration — *Completed (2026-11-16)*
 Rules decided by the product owner 2026-11-16 (GAME_DESIGN.md "AI rules"): Groq free tier
 (`gpt-oss-120b`) behind a provider-independent layer; Tutor first; written answers count toward mastery
 only when the Examiner is confident; 30 AI requests per player per day.
@@ -170,7 +170,7 @@ on request.
 | Progression Advisor: engine plan on the dashboard ("Next steps"); "Explain my plan" (AI) | Completed, tested offline and live with Groq |
 | Advanced checks taken live | Not yet (no competency is Proficient on the test account) |
 | Log why a reply needed a repair (field names only, no text) | Completed in Milestone C part 1 |
-### Milestone C — Researcher and AI curricula for any subject; Game Master and Strategist formats — *Planned (decisions made 2026-11-16)*
+### Milestone C — Researcher and AI curricula for any subject; Game Master and Strategist formats — *Completed (2026-11-16)*
 Decided 2026-11-16: grounding from Wikipedia plus verified extra sources; AI-made subjects use the
 same rules, clearly labelled; building counts against the 30-a-day allowance. Built in three parts:
 
@@ -178,7 +178,7 @@ same rules, clearly labelled; building counts against the 30-a-day allowance. Bu
 |---|---|---|
 | C1 | Researcher ("Find further reading" on Codex entries); server-side source checks (Open Library, Crossref, trusted web pages); repair-reason logging | Completed; tested offline and live with Groq (2026-11-16) |
 | C2 | "Start a new subject": AI outline, then lessons and checks built one at a time from fetched source text; "AI-generated" labels; report-a-mistake. Decided 2026-11-16: 4 lessons, harmful topics refused (advice topics labelled), reports flag the lesson, 3 AI subjects per player | Completed; tested offline and live with Groq (2026-11-16). Lessons can't be rebuilt yet |
-| C3 | Game Master and Strategist reply formats, checks and fixtures (used in Phase 5) | Not started |
+| C3 | Game Master and Strategist reply formats, checks and fixtures (used in Phase 5). Decided 2026-11-16: groundwork only, nothing new on screen until Phase 5; bosses use only the course's already-checked questions | Completed; tested offline and live with Groq (2026-11-16) |
 
 ## Phase 5 — Campaigns, quests, and encounters — *Not started*
 ## Phase 6 — First playable campaign: History / Ancient Mesopotamia — *Not started*

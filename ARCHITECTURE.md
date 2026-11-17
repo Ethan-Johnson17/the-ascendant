@@ -196,4 +196,5 @@ importable by server code. No product requirement changes.
 | Progression Advisor ("Next steps" on the dashboard) | Implemented, tested offline and live with Groq (Phase 4 B) |
 | Researcher ("Further reading" on Codex entries) and server-side source checks (`src/services/research/`) | Implemented, tested offline and live with Groq (Phase 4 C1) |
 | Course Builder ("Start a new subject"), Wikipedia reader, quote checks (`src/services/subjects/`) | Implemented, tested offline and live with Groq (Phase 4 C2) |
+| Game Master and Strategist formats, checks and fixtures; boss-plan rules in the engine (`src/engine/encounters/`) | Implemented, tested offline and live with Groq (Phase 4 C3); no screens until Phase 5 |
 | Everything else | Not started |

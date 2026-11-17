@@ -81,6 +81,35 @@ const buildLessonReplySchema = z.object({
 });
 export type BuildLessonReply = z.infer<typeof buildLessonReplySchema>;
 
+/** The Game Master's checked scene (no screen yet; quests use it in Phase 5). */
+const sceneReplySchema = z.object({
+  scene: z.object({
+    narration: z.array(z.string()).min(1),
+    dialogue: z.array(z.object({ npcId: z.string(), name: z.string(), line: z.string() })),
+    choices: z.array(z.object({ actionId: z.string(), label: z.string() })).min(1),
+    removed: z.number().int(),
+  }),
+  origin: z.enum(['ai', 'fixture']),
+  usage: usageSchema,
+});
+export type SceneReply = z.infer<typeof sceneReplySchema>;
+
+/** The Strategist's boss plan, allowed by the engine. Question ids only, never answers. */
+const bossReplySchema = z.object({
+  boss: z.object({
+    name: z.string(),
+    epithet: z.string(),
+    intro: z.array(z.string()).min(1),
+    rounds: z.array(z.object({ competencyId: z.string(), competencyName: z.string(), title: z.string(), narration: z.string().nullable(), questionIds: z.array(z.string()).min(1) })).min(1),
+    victory: z.string(),
+    defeat: z.string(),
+    removed: z.number().int(),
+  }),
+  origin: z.enum(['ai', 'fixture']),
+  usage: usageSchema,
+});
+export type BossPlanReply = z.infer<typeof bossReplySchema>;
+
 export interface NewSubjectRequest {
   readonly subject: string;
   readonly objective: string;
@@ -157,6 +186,11 @@ export function createAiClient(db: SupabaseClient) {
     createSubject: (request: NewSubjectRequest) => call(db, { action: 'create_subject', request }, createSubjectReplySchema),
     /** Builds the next lesson and its check of one of the player's subjects (2 AI requests). */
     buildLesson: (templateId: string) => call(db, { action: 'build_lesson', templateId }, buildLessonReplySchema),
+    /** The Game Master narrates the preview scene (1 AI request; changes nothing). For Phase 5 quests. */
+    narrateScene: (campaignId: string, message: string | null = null, history: readonly { player: string; narration: string }[] = []) =>
+      call(db, { action: 'narrate_scene', campaignId, message, history }, sceneReplySchema),
+    /** The Strategist proposes a boss from the course's checked questions (1 AI request; nothing saved). For Phase 5. */
+    planBoss: (campaignId: string) => call(db, { action: 'plan_boss', campaignId }, bossReplySchema),
   };
 }
 export type AiClient = ReturnType<typeof createAiClient>;
