@@ -180,7 +180,17 @@ same rules, clearly labelled; building counts against the 30-a-day allowance. Bu
 | C2 | "Start a new subject": AI outline, then lessons and checks built one at a time from fetched source text; "AI-generated" labels; report-a-mistake. Decided 2026-11-16: 4 lessons, harmful topics refused (advice topics labelled), reports flag the lesson, 3 AI subjects per player | Completed; tested offline and live with Groq (2026-11-16). Lessons can't be rebuilt yet |
 | C3 | Game Master and Strategist reply formats, checks and fixtures (used in Phase 5). Decided 2026-11-16: groundwork only, nothing new on screen until Phase 5; bosses use only the course's already-checked questions | Completed; tested offline and live with Groq (2026-11-16) |
 
-## Phase 5 — Campaigns, quests, and encounters — *Not started*
+## Phase 5 — Campaigns, quests, and encounters — *In progress (decisions made 2026-11-16)*
+Decided 2026-11-16: quests from game templates with AI story; a boss at each stage (Apprentice,
+Competent, Proficient), each unlocking the next stage's checks; Resolve points (3, Dwarves 4); retry
+after a recovery quest. Built in
+three parts:
+
+| Part | Contents | Status |
+|---|---|---|
+| A | Quests: templates built from each course, objectives and success conditions, completion records, XP, Game Master narration, quest screen | Completed; tested offline and live (2026-11-17) |
+| B | Boss battles: one per stage, each gating the next stage's checks; unlock rules, Resolve combat, race traits and class abilities, victory reward, defeat → recovery quest → retry, battle result screen | Not started |
+| C | Practical projects and free-form talk with characters; "go deeper" for AI-made courses (harder checks, so they can pass Competent) | Not started |
 ## Phase 6 — First playable campaign: History / Ancient Mesopotamia — *Not started*
 ## Phase 7 — Presentation and cinematics — *Not started*
 ## Phase 8 — Testing and release preparation — *Not started*

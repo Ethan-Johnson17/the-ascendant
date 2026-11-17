@@ -39,6 +39,31 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-17 — Phase 5 Part A (quests)
+Automated: **269 tests, 269 passing**; typecheck and production build clean.
+
+New unit tests (`src/engine/quests/quests.test.ts`): a learning quest per goal with stable keys;
+progress only from records; ready when every step is done, with XP key `quest_completed:<campaign>/<key>`;
+a completed quest is never offered again; mastery quests open at the stage below; only the next
+preparation gate is shown, for skills the course can test; review and retention milestones.
+
+New database tests (`supabase/tests/quests.test.ts`): a new player's quests, nothing completed;
+lesson plus passed check completes the quest and pays 40 XP once (listing again pays nothing);
+nothing recorded while paused; another player can't list or read them; players can't write
+completions or call the function; the database refuses mismatched quest XP; the Game Master's story
+is labelled, saved, and costs nothing the second time; unknown and locked quests get no story.
+
+Live (test account, 2026-11-17):
+- Mesopotamia: four quests already earned before quests existed completed on first view, +40 XP
+  each (land between the rivers, plenty and scarcity, its Competent mastery quest, first review).
+- Found and fixed: "Every skill at Apprentice" listed all 10 skills, most with no lessons yet, so it
+  couldn't be finished. It now covers only skills the course can test. A quest whose goal had no
+  lesson was named after its check ("Check: …: Proficient"); it now uses the topic name.
+- Quest story (Groq): a two-paragraph scene with the Guide; "Set out on this quest now" opened the
+  quest's first lesson (610 in / 271 out tokens).
+- Volcanoes: 3 open quests matching its two built lessons; the campaign page shows "3 open · 0 completed".
+- Not yet seen live: a review-quest completion; a paused campaign.
+
 ### 2026-11-16 — Phase 4 Milestone C part 3 (Game Master and Strategist)
 Automated: **256 tests, 256 passing**; typecheck and production build clean.
 

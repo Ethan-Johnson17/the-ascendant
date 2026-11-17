@@ -127,7 +127,7 @@ title; every one was caught. With books and articles preferred in the prompt, a 
    dropped (duplicate options, "all of the above", answers out of range).
 6. **Engine and database decide.** Keys are made by our code, not the AI. The lesson is turned into a
    normal curriculum and must pass `validateCurriculum`; the engine sets the check's target stage
-   (lessons 1–2 → Apprentice, 3–4 → Practitioner). A service-role function saves it, checking ids and
+   (lessons 1–2 → Apprentice, 3–4 → Competent). A service-role function saves it, checking ids and
    order. After that it is an ordinary lesson: same XP, mastery and Codex rules.
 
 Lessons must be built in order; the previous lesson must be completed first. Building needs 2 free
@@ -154,6 +154,13 @@ Our code (`checkScene`) removes any line that claims a game result (XP, levels, 
 rewards, winning or losing, "the answer is"), lines from unknown characters and invented actions. If
 no narration is left, or an offered action has no label, nothing is shown. Choices always appear in
 the game's order. The Game Master changes nothing and nothing is saved.
+
+### Quest stories (Phase 5 Part A)
+Action `narrate_quest`. On the Quests screen, "Hear the Guide's story" asks the Game Master to
+introduce one quest. The scene is built from the engine's quest (title, summary, steps) with two
+actions, "begin" (opens the first unfinished step) and "later". The reply goes through the same
+`checkScene` checks, is saved in `quest_stories`, and is returned from there afterwards, so each
+quest's story costs one request once. Locked quests have no story. The story never changes a quest.
 
 ### Strategist (Milestone C part 3; no screen until Phase 5)
 Action `plan_boss`. Decided 2026-11-16: a boss uses only the course's existing, already-checked

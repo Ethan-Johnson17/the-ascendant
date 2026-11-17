@@ -28,6 +28,8 @@ about 1,500 input and up to 2,500 output. So a 4-lesson course is roughly 9 requ
 Game Master scene, measured 2026-11-16: about 600 input and 300 output tokens. Strategist boss plan:
 about 800–1,500 input and 530–630 output tokens. One request each.
 
+Quest story, measured 2026-11-17: about 610 input and 270 output tokens, once per quest.
+
 ### Login emails (Supabase Auth)
 Supabase's built-in email sender is for testing only: it sends just a handful of emails per hour
 and only reliably to the project team's addresses. Sign-up confirmations and password resets for

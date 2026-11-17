@@ -110,6 +110,19 @@ const bossReplySchema = z.object({
 });
 export type BossPlanReply = z.infer<typeof bossReplySchema>;
 
+const questStoryReplySchema = z.object({
+  story: z.object({
+    narration: z.array(z.string()).min(1),
+    dialogue: z.array(z.object({ npcId: z.string(), name: z.string(), line: z.string() })),
+    choices: z.array(z.object({ actionId: z.string(), label: z.string() })),
+    removed: z.number().int(),
+    origin: z.enum(['ai', 'fixture']),
+  }),
+  saved: z.boolean(),
+  usage: usageSchema.optional(),
+});
+export type QuestStoryReply = z.infer<typeof questStoryReplySchema>;
+
 export interface NewSubjectRequest {
   readonly subject: string;
   readonly objective: string;
@@ -191,6 +204,8 @@ export function createAiClient(db: SupabaseClient) {
       call(db, { action: 'narrate_scene', campaignId, message, history }, sceneReplySchema),
     /** The Strategist proposes a boss from the course's checked questions (1 AI request; nothing saved). For Phase 5. */
     planBoss: (campaignId: string) => call(db, { action: 'plan_boss', campaignId }, bossReplySchema),
+    /** The Game Master tells a quest's story (1 AI request the first time; saved afterwards). */
+    narrateQuest: (campaignId: string, questKey: string) => call(db, { action: 'narrate_quest', campaignId, questKey }, questStoryReplySchema),
   };
 }
 export type AiClient = ReturnType<typeof createAiClient>;

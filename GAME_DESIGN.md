@@ -476,6 +476,33 @@ The AI evaluates responses and submits structured results. The game engine valid
 
 The AI must not independently award victories or alter character statistics.
 
+## Quest and boss rules (product owner decision, 2026-11-16)
+
+- **Quests come from game templates; the AI adds the story.** The game builds each quest from the
+  course itself (for example "study these lessons and pass their check", "clear weak spots in the
+  Weakness Bank"), with fixed objectives, success conditions and XP. The Game Master narrates it.
+  Quests work for every subject, and without AI.
+- **Quest templates (built 2026-11-17):** a *learning quest* per curriculum goal (study its lessons,
+  pass its Apprentice check); a *mastery quest* per goal and harder stage (pass its Competent or
+  Proficient checks; opens when the skills reach the stage below); *boss preparation* (every skill the
+  course can test at Apprentice, then Competent, then Proficient; one at a time); *review quests*
+  (clear 1, 3, 6, 10 weak spots) and *retention quests* (pass 1, 3, 6, 10 spaced reviews). Every
+  quest is worth 40 XP (configurable), paid once. A quest completes automatically when the game
+  sees every step done in the player's records; work done before quests existed counts. The Game
+  Master's story is told once per quest, on request, and saved.
+- **A boss at each stage (revised 2026-11-16; replaces "one boss per course").** Bosses are the gates
+  between stages. When every skill a course's boss tests has reached **Apprentice**, the Apprentice
+  boss opens; beating it unlocks the course's **Competent** checks. The Competent boss (every skill at
+  Competent) unlocks the **Proficient** checks, and the Proficient boss unlocks the **Advanced**
+  checks. Each boss is harder than the last. Beating a boss never ends the course.
+- Consequence: a skill can't pass the next stage's gate on its own; every tested skill must reach
+  the stage first. Progress already earned before bosses existed is kept.
+- **Resolve:** the player starts a boss battle with **3 Resolve** (Dwarves 4). Each wrong answer costs
+  1; at 0 the player is defeated. Getting through every round wins. Race traits and class abilities
+  act on Resolve, rounds and questions as listed in "Race, class and background effects".
+- **After a defeat:** the game creates a **recovery quest** on the exact concepts the player missed.
+  Finishing it allows a retry. No XP, levels, mastery or Codex progress is ever lost.
+
 # 12. Failure and Recovery
 
 Use a hybrid RPG/educational approach.
