@@ -5,7 +5,7 @@ import type { WrittenItem } from '../../engine/learning/curriculum.ts';
 import { fixtureAdvice, type AdvisorStep } from './roles/advisor.ts';
 import { fixtureExaminerJudgement } from './roles/examiner.ts';
 import { fixtureResearch } from './roles/researcher.ts';
-import { courseRequestSchema, fixtureCheck, fixtureLesson, fixtureOutline } from './roles/courseBuilder.ts';
+import { courseRequestSchema, fixtureAdvanced, fixtureCheck, fixtureLesson, fixtureOutline } from './roles/courseBuilder.ts';
 import { fixtureTutorAnswer, tutorMaterialSchema } from './roles/tutor.ts';
 import { fixtureScene, type Scene } from './roles/gameMaster.ts';
 import { bossContextSchema, fixtureStrategy } from './roles/strategist.ts';
@@ -30,7 +30,8 @@ export function createDevelopmentFixtures(): AiProvider {
       if (hint?.kind === 'outline') return fixtureOutline(courseRequestSchema.parse(hint.request));
       if (hint?.kind === 'lesson' && typeof hint.articleText === 'string') return fixtureLesson(hint.articleText);
       if (hint?.kind === 'check' && typeof hint.lessonText === 'string') return fixtureCheck(hint.lessonText, typeof hint.conceptCount === 'number' ? hint.conceptCount : 1);
-      throw new Error('The Course Builder fixture needs an outline, lesson or check hint.');
+      if (hint?.kind === 'advanced') return fixtureAdvanced(typeof hint.conceptCount === 'number' ? hint.conceptCount : 1);
+      throw new Error('The Course Builder fixture needs an outline, lesson, check or advanced hint.');
     },
     progression_advisor: (req) => fixtureAdvice((req.fixtureHint as { steps?: AdvisorStep[] } | undefined)?.steps ?? []),
     examiner: (req) => {

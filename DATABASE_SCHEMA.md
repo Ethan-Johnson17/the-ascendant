@@ -109,6 +109,11 @@ Migration `supabase/migrations/20261116000500_generated_subjects.sql` (tested of
 - Service-role functions: `ai_subject_slots`, `ai_create_subject` (locks per player, enforces the
   open-subject limit, checks shape and ids), `ai_course_context`, `ai_save_lesson` (lessons in order;
   records the article revision).
+- "Go deeper" (Phase 5 C1, migration `20261117000400_go_deeper.sql`): service-role functions
+  `ai_deepen_context` (a built lesson's text, Codex concepts, check stages and the player's skill
+  stage) and `ai_save_deeper_check`. The save refuses: a stage that isn't the next one, a stage
+  above Advanced, a player whose skill isn't at the stage below, a paused or closed course, rows
+  whose ids or concepts belong to another lesson, and an Advanced check with non-written questions.
 - Player function `close_generated_subject`: closes a subject and pauses its campaign. **There is
   no delete**: deleting would also delete the XP records, and earned progress is permanent.
 

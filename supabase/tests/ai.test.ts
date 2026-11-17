@@ -248,7 +248,8 @@ describe('Researcher and further reading (database + service)', () => {
   ] };
 
   function researchService(provider: AiProvider | null) {
-    let now = new Date('2026-11-16T10:00:00Z');
+    // Starts at the real time: the database stamps each search with its own now().
+    let now = new Date();
     const svc = createAiService(serviceStore(t), provider, { now: () => now, sleep: async () => {}, research: { fetch: fakeFetch, timeoutMs: 500 } });
     return { svc, advanceDays: (d: number) => (now = new Date(now.getTime() + d * 86_400_000)) };
   }

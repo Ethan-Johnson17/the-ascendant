@@ -56,6 +56,7 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('create_subject'), request: courseRequestSchema }),
   z.object({ action: z.literal('build_lesson'), templateId: z.string().regex(/^ai-[a-z0-9]{6,40}$/) }),
+  z.object({ action: z.literal('deepen_lesson'), templateId: z.string().regex(/^ai-[a-z0-9]{6,40}$/), lessonKey: z.string().regex(/^[a-z0-9-]{1,40}$/) }),
   z.object({
     action: z.literal('narrate_scene'),
     campaignId: z.uuid(),
@@ -469,6 +470,7 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       if (req.data.action === 'research') return await research(userId, req.data);
       if (req.data.action === 'create_subject') return await subjects.create(userId, req.data.request);
       if (req.data.action === 'build_lesson') return await subjects.build(userId, req.data.templateId);
+      if (req.data.action === 'deepen_lesson') return await subjects.deepen(userId, req.data.templateId, req.data.lessonKey);
       if (req.data.action === 'narrate_scene') return await narrateScene(userId, req.data);
       if (req.data.action === 'plan_boss') return await planBoss(userId, req.data);
       if (req.data.action === 'narrate_quest') return await narrateQuest(userId, req.data);

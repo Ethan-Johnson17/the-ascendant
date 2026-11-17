@@ -1,6 +1,6 @@
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCharacterAs, createTestDb, serviceStore, type TestDb } from './testDb.ts';
+import { createCharacterAs, createTestDb, serviceStore, winBossesAs, type TestDb } from './testDb.ts';
 import { createAiService } from '../../src/services/ai/aiService.ts';
 import { createDevelopmentFixtures } from '../../src/services/ai/providerFromEnv.ts';
 import { defaultAiConfig } from '../../src/services/ai/config.ts';
@@ -49,9 +49,9 @@ function fakeWikipedia(opts: { missing?: boolean } = {}) {
 }
 
 let n = 0;
-function serviceWith(provider: AiProvider | null, wiki = fakeWikipedia()) {
+function serviceWith(provider: AiProvider | null, wiki = fakeWikipedia(), now = () => new Date('2026-11-16T10:00:00Z')) {
   return createAiService(serviceStore(t), provider, {
-    now: () => new Date('2026-11-16T10:00:00Z'), sleep: async () => {},
+    now, sleep: async () => {},
     subjects: { fetch: wiki.fetch, timeoutMs: 500, newId: () => `ai-test${String(++n).padStart(6, '0')}` },
   });
 }
@@ -213,5 +213,89 @@ describe('Start a new subject (database + service)', () => {
     assert.ok(await report(u), 'only once');
     assert.ok(await report(await newPlayer()), 'not in someone else’s course');
     assert.ok(await t.errorAsUser(u, `update public.content_reports set message = 'changed'`));
+  });
+});
+
+describe('Go deeper (database + service)', () => {
+  const setStage = (campaignId: string, stage: number) =>
+    t.db.query('update public.competency_progress set mastery_stage = $2 where campaign_id = $1', [campaignId, stage]);
+  const checks = (u: string, templateId: string) =>
+    t.asUser(u, async (tx) => (await tx.query<{ key: string; target_stage: number; question_count: number; written_count: number; kinds: string[] }>(
+      `select a.key, a.target_stage, a.question_count, a.written_count, array_agg(i.kind order by i.position) as kinds
+         from public.learning_activities a join public.assessment_items i on i.activity_id = a.id
+        where a.template_id = $1 and a.kind = 'assessment' group by a.id order by a.target_stage`, [templateId])).rows);
+
+  it('adds Competent, Proficient and Advanced checks one at a time, only when the skill is ready', async () => {
+    const u = await newPlayer();
+    let minutes = 0; // five minutes pass between requests, so the per-minute limit stays out of the way
+    const svc = serviceWith(createDevelopmentFixtures(), fakeWikipedia(), () => new Date(Date.parse('2026-11-16T10:00:00Z') + (minutes += 5) * 60_000));
+    const made = (await create(svc, u)).body as { templateId: string; campaignId: string };
+    assert.equal((await svc.handle(u, { action: 'build_lesson', templateId: made.templateId })).status, 200);
+    const lessonKey = (await t.asUser(u, async (tx) => (await tx.query<{ key: string }>(
+      `select key from public.learning_activities where template_id = $1 and kind = 'lesson'`, [made.templateId])).rows[0]!.key));
+    const deepen = (key = lessonKey) => svc.handle(u, { action: 'deepen_lesson', templateId: made.templateId, lessonKey: key });
+    const requests = async () => (await logRows(u)).length;
+
+    // Still Novice: the Competent check waits, and no AI request is spent.
+    const before = await requests();
+    const waiting = await deepen();
+    assert.deepEqual([waiting.status, (waiting.body as { code: string }).code], [409, 'not_ready']);
+    assert.equal(await requests(), before);
+
+    await setStage(made.campaignId, 2);
+    const competent = await deepen();
+    assert.equal(competent.status, 200, JSON.stringify(competent.body));
+    assert.deepEqual([(competent.body as { stage: number }).stage, (competent.body as { origin: string }).origin], [3, 'fixture']);
+    assert.equal(await requests(), before + 1, 'one request per deeper check');
+    assert.equal((await deepen()).status, 409, 'Proficient waits for Competent');
+
+    await setStage(made.campaignId, 3);
+    assert.equal((await deepen()).status, 200);
+    await setStage(made.campaignId, 4);
+    const advanced = await deepen();
+    assert.equal(advanced.status, 200, JSON.stringify(advanced.body));
+
+    const rows = await checks(u, made.templateId);
+    assert.deepEqual(rows.map((r) => r.target_stage), [2, 3, 4, 5]);
+    assert.deepEqual(rows.map((r) => r.key), [`${lessonKey}-check`, `${lessonKey}-check-3`, `${lessonKey}-check-4`, `${lessonKey}-check-5`]);
+    assert.ok(rows.slice(1, 3).every((r) => r.question_count === 3 && r.written_count === 1 && r.kinds.at(-1) === 'written'));
+    assert.deepEqual([rows[3]!.question_count, rows[3]!.written_count, rows[3]!.kinds], [2, 2, ['written', 'written']], 'Advanced is written answers only');
+
+    await setStage(made.campaignId, 5);
+    assert.deepEqual((await deepen()).body, { error: 'This lesson already has every check up to Advanced.', code: 'complete' });
+    assert.equal((await deepen('l9-missing')).status, 404);
+  });
+
+  it('a deeper check plays like any check, behind the same boss gate', async () => {
+    const u = await newPlayer();
+    const svc = serviceWith(createDevelopmentFixtures());
+    const made = (await create(svc, u)).body as { templateId: string; campaignId: string };
+    const lessonId = ((await svc.handle(u, { action: 'build_lesson', templateId: made.templateId })).body as { activityId: string }).activityId;
+    await setStage(made.campaignId, 2);
+    const deeper = (await svc.handle(u, { action: 'deepen_lesson', templateId: made.templateId, lessonKey: lessonId.split('/')[1]! })).body as { activityId: string };
+
+    const learning = createLearningService(serviceStore(t));
+    const locked = await learning.handle(u, { action: 'start_check', campaignId: made.campaignId, activityId: deeper.activityId });
+    assert.notEqual(locked.status, 200, 'the Apprentice boss comes first');
+    await winBossesAs(t, u, made.campaignId, [2]);
+    const start = await learning.handle(u, { action: 'start_check', campaignId: made.campaignId, activityId: deeper.activityId });
+    assert.equal(start.status, 200, JSON.stringify(start.body));
+    assert.doesNotMatch(JSON.stringify(start.body), /"answer"|modelAnswer|criteria/, 'no answers reach the player');
+  });
+
+  it('the database refuses skipped stages, other lessons’ rows and players calling it', async () => {
+    const u = await newPlayer();
+    const svc = serviceWith(createDevelopmentFixtures());
+    const made = (await create(svc, u)).body as { templateId: string; campaignId: string };
+    const lessonKey = ((await svc.handle(u, { action: 'build_lesson', templateId: made.templateId })).body as { activityId: string }).activityId.split('/')[1]!;
+    await setStage(made.campaignId, 4);
+    const save = (stage: number, rows: object) => t.asRole('service_role', (tx) =>
+      tx.query('select public.ai_save_deeper_check($1, $2, $3, $4::smallint, $5::jsonb)', [u, made.templateId, lessonKey, stage, JSON.stringify(rows)])).then(() => null, (e: Error) => e.message);
+    assert.match((await save(4, { activity: {}, items: [] }))!, /out of order/, 'Proficient cannot come before Competent');
+    const id = `${made.templateId}/${lessonKey}-check-3`;
+    const activity = { id, key: `${lessonKey}-check-3`, template_id: made.templateId, objective_id: `${made.templateId}/${lessonKey}-goal`, kind: 'assessment', target_stage: 3, competency_ids: ['someone-else/skill'] };
+    assert.match((await save(3, { activity, items: [{}, {}] }))!, /another lesson/);
+    assert.ok(await t.errorAsUser(u, `select public.ai_deepen_context($1, $2, $3)`, [u, made.templateId, lessonKey]));
+    assert.ok(await t.errorAsUser(u, `select public.ai_save_deeper_check($1, $2, $3, 3::smallint, '{}'::jsonb)`, [u, made.templateId, lessonKey]));
   });
 });

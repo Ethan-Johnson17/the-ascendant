@@ -520,6 +520,21 @@ The AI must not independently award victories or alter character statistics.
     it counts as evidence for Advanced and gives a one-time XP reward.
   - C3 free talk with characters (the Game Master): story only. It never gives XP or changes
     progress; each message uses 1 daily AI request; characters may point to lessons and quests.
+- **How C1 "go deeper" works (built 2026-11-17):**
+  - Under each built lesson of an AI-made course, the campaign page offers the lesson's next harder
+    check, one stage at a time: **Competent** (for lessons 1–2, whose first check is Apprentice),
+    then **Proficient**, then **Advanced**. The Competent step was added so lessons 1–2 can progress
+    at all; the decision named Proficient and Advanced.
+  - The button appears only when the player could take the check now (their skill is at the stage
+    below). Otherwise it says which stage to reach first, so no AI request is spent on a check that
+    can't be used yet. Each check costs 1 daily AI request.
+  - Competent and Proficient checks: harder multiple-choice questions about causes and connections
+    (difficulty 2–3) plus one written question. Every multiple-choice answer must be backed by a
+    word-for-word passage of the lesson, or the question is dropped.
+  - Advanced checks are **written answers only** (2 questions), marked by the Examiner, as the
+    design already requires for Advanced.
+  - A deeper check is an ordinary check: same mastery rules (two passes on different days), same XP,
+    same boss gates (the Competent check opens after the Apprentice boss).
 - **How B1 works (built 2026-11-17):**
   - A boss opens when every skill the course tests at that stage has reached the stage, the boss of
     the stage below is beaten, and (for AI courses) every planned lesson is built.

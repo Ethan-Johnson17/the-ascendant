@@ -5,10 +5,11 @@ import { runStructured } from '../ai/structured.ts';
 import type { createUsageLog } from '../ai/usageLog.ts';
 import { AiError, noUsage, type AiMessage, type AiProvider } from '../ai/types.ts';
 import {
-  buildCheckMessages, buildLessonMessages, buildOutlineMessages, checkReplySchema, courseRequestSchema, keepQuoted, keepSupported, lessonReplySchema,
+  advancedReplySchema, buildAdvancedMessages, buildCheckMessages, keepAdvanced, buildLessonMessages, buildOutlineMessages, checkReplySchema, courseRequestSchema, keepQuoted, keepSupported, lessonReplySchema,
   outlineReplySchema, type CourseRequest,
 } from '../ai/roles/courseBuilder.ts';
-import { assembleLesson, lessonRows, lessonText, planSubject, subjectRows, type SubjectPlan } from './assemble.ts';
+import { assembleLesson, deeperCheckRows, lessonRows, lessonText, planSubject, subjectRows, type SubjectPlan } from './assemble.ts';
+import { deepestStage, deeperStatus } from '../../engine/learning/deeper.ts';
 import { checkTopic, combineAdvice } from './topicGuard.ts';
 import type { Wikipedia } from './wikipedia.ts';
 
@@ -51,6 +52,21 @@ const courseContextSchema = z.object({
   lessons: z.array(plannedLessonSchema),
   completed: z.array(z.string()),
 });
+
+const deepenContextSchema = z.object({
+  campaignId: z.uuid().nullable(),
+  campaignStatus: z.enum(['active', 'paused', 'completed']).nullable(),
+  closed: z.boolean(),
+  lessonTitle: z.string(),
+  sections: z.array(z.object({ heading: z.string(), paragraphs: z.array(z.string()) })),
+  codex: z.array(z.object({ key: z.string(), title: z.string() })).min(1),
+  checkStages: z.array(z.number().int()),
+  nextPosition: z.number().int(),
+  competencyId: z.string(),
+  competencyName: z.string(),
+  skillStage: z.number().int(),
+});
+const stageName: Readonly<Record<number, string>> = { 1: 'Novice', 2: 'Apprentice', 3: 'Competent', 4: 'Proficient', 5: 'Advanced' };
 
 const failure: Record<AiError['kind'] | 'internal', { status: number; error: string }> = {
   not_configured: { status: 503, error: 'The Course Builder isn’t set up on this server yet.' },
@@ -205,5 +221,58 @@ export function createSubjectService(d: SubjectServiceDeps) {
     };
   }
 
-  return { create, build };
+  /**
+   * "Go deeper": writes the next harder check for a built lesson (1 request), from the lesson's own
+   * text. Only when the player's skill is ready for it; the database checks the order again.
+   */
+  async function deepen(userId: string, templateId: string, lessonKey: string): Promise<SubjectResponse> {
+    const raw = await d.store.call('ai_deepen_context', { p_user_id: userId, p_template_id: templateId, p_lesson_key: lessonKey });
+    if (raw === null) return { status: 404, body: { error: 'That lesson was not found.' } };
+    const ctx = deepenContextSchema.parse(raw);
+    if (ctx.closed || ctx.campaignStatus !== 'active' || !ctx.campaignId) return { status: 409, body: { error: 'This subject is closed or paused, so nothing new is built.', code: 'not_active' } };
+    const status = deeperStatus(ctx.checkStages, ctx.skillStage);
+    if (status.kind === 'complete') return { status: 409, body: { error: 'This lesson already has every check up to Advanced.', code: 'complete' } };
+    if (status.kind === 'waiting') {
+      return { status: 409, body: { error: `Bring ${ctx.competencyName} to ${stageName[status.needs]} first; the harder check is written when you can take it.`, code: 'not_ready' } };
+    }
+    if (!d.provider) return { status: failure.not_configured.status, body: { error: failure.not_configured.error, code: 'not_configured' } };
+    if ((await d.log.usage(userId)).remaining < 1) return { status: 429, body: await limitBody(userId) };
+
+    const text = ctx.sections.map((s) => [s.heading, ...s.paragraphs].join('\n')).join('\n\n');
+    const brief = { lessonTitle: ctx.lessonTitle, lessonText: text, concepts: ctx.codex.map((c) => c.title) };
+    const lesson = { key: lessonKey, title: ctx.lessonTitle, competencyId: ctx.competencyId, position: ctx.nextPosition };
+    const codexKeys = ctx.codex.map((c) => c.key);
+    let built: ReturnType<typeof deeperCheckRows>;
+    let origin: 'ai' | 'fixture';
+    let usedToday: number;
+    let dropped = 0;
+    if (status.stage === deepestStage) {
+      // Advanced: written answers only, so there are no quotes to check; the Examiner marks them.
+      const adv = await ask(userId, ctx.campaignId, 'course_advanced', buildAdvancedMessages(brief), advancedReplySchema, cb.checkTokens, { kind: 'advanced', conceptCount: ctx.codex.length });
+      if (!adv.ok) return adv.response;
+      ({ origin, usedToday } = adv);
+      built = deeperCheckRows(templateId, lesson, codexKeys, keepAdvanced(adv.data, ctx.codex.length), status.stage);
+    } else {
+    const asked = await ask(userId, ctx.campaignId, 'course_check', buildCheckMessages({
+      lessonTitle: ctx.lessonTitle, lessonText: text, concepts: ctx.codex.map((c) => c.title), deeperLevel: stageName[status.stage]!,
+    }), checkReplySchema, cb.checkTokens, { kind: 'check', lessonText: text, conceptCount: ctx.codex.length });
+    if (!asked.ok) return asked.response;
+    ({ origin, usedToday } = asked);
+    const kept = keepSupported(asked.data, text, ctx.codex.length);
+    dropped = kept.dropped;
+    if (kept.check.questions.length < 3) {
+      return { status: 422, body: { error: 'Too few of the harder questions could be backed up by the lesson, so nothing was saved. Please try again.', code: 'unsupported', droppedQuestions: dropped } };
+    }
+    built = deeperCheckRows(templateId, lesson, codexKeys, kept.check, status.stage);
+    }
+    const rows = built;
+    if (!rows.ok) return { status: 422, body: { error: 'The harder check didn’t pass the game’s course checks, so it wasn’t saved. Please try again.', code: 'invalid', issues: rows.issues.slice(0, 10) } };
+    await d.store.call('ai_save_deeper_check', { p_user_id: userId, p_template_id: templateId, p_lesson_key: lessonKey, p_stage: status.stage, p_rows: { activity: rows.activity, items: rows.items } });
+    return {
+      status: 200,
+      body: { activityId: rows.activity.id, stage: status.stage, origin, droppedQuestions: dropped, usage: usageBody(usedToday) },
+    };
+  }
+
+  return { create, build, deepen };
 }

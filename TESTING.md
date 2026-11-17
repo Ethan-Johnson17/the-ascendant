@@ -39,6 +39,24 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-17 — Phase 5 Part C1 ("go deeper")
+Automated: **322 tests, 322 passing**; typecheck and production build clean.
+
+New unit tests (`src/engine/learning/deeper.test.ts`): the next stage, waiting until the skill is
+ready, stopping at Advanced, difficulty never pure recall.
+
+New database tests (`supabase/tests/subjects.test.ts`, "Go deeper"): Competent, Proficient and
+Advanced added one at a time, only when ready, 1 request each and none when refused; Advanced is
+written-only; a deeper check starts like any check behind the same boss gate and shows no answers;
+the database refuses skipped stages, rows from another lesson and players calling the functions.
+
+Fixed: two tests that used a fixed "today" clock (see the development log).
+
+Live (2026-11-17): migration applied and the `ai` function deployed. On the Volcanoes course the
+campaign page shows "reach Apprentice … to unlock a harder Competent check" under both built lessons;
+the deployed server refused `deepen_lesson` with "not ready" and "not found" and logged no AI request.
+Not yet tried live: writing a deeper check (the account's skills are Novice).
+
 ### 2026-11-17 — Phase 5 Part B2 (race traits and class abilities)
 Automated: **315 tests, 315 passing**; typecheck and production build clean.
 
