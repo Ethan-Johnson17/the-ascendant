@@ -127,7 +127,7 @@ title; every one was caught. With books and articles preferred in the prompt, a 
    dropped (duplicate options, "all of the above", answers out of range).
 6. **Engine and database decide.** Keys are made by our code, not the AI. The lesson is turned into a
    normal curriculum and must pass `validateCurriculum`; the engine sets the check's target stage
-   (lessons 1–2 → Apprentice, 3–4 → Practitioner). A service-role function saves it, checking ids and
+   (lessons 1–2 → Apprentice, 3–4 → Competent). A service-role function saves it, checking ids and
    order. After that it is an ordinary lesson: same XP, mastery and Codex rules.
 
 Lessons must be built in order; the previous lesson must be completed first. Building needs 2 free
