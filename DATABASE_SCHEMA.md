@@ -36,6 +36,28 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 5 Part B1 (boss battles)
+
+Migration `supabase/migrations/20261117000200_boss_battles.sql` (tested offline; applied live):
+- `boss_encounters`: player, campaign, stage (2, 3 or 4), status (active, won, lost), the allowed
+  plan (story and question ids, never answers), where the plan came from (`ai`, `fixture`, `game`),
+  question ids (1–12), Resolve and its maximum, position, answers given, concepts missed, start and
+  end times. Checks: a win needs Resolve left and every question answered; a loss needs Resolve 0.
+  One active battle and one win per boss per campaign. Players read their own rows; no player writes.
+- `boss_context` (service role): what the engine needs to decide bosses (course competencies, checks,
+  questions without answer keys, stages, battles, passed checks, unbuilt lessons).
+- `boss_create_encounter` (service role): starts a battle only in an active campaign, with this
+  course's own non-written questions, each once, and only if the boss below is beaten.
+- `boss_answer_context` (service role): the current question with its answer key (server only) and its
+  Weakness Bank row.
+- `boss_record_answer` (service role): records one answer as the engine decided it, refusing answers
+  out of order, a Resolve change other than 0 or −1, a wrong result, and XP other than
+  `boss_defeated` for this boss on a win; updates the Weakness Bank and concept progress; XP goes
+  through `apply_xp_award`, so it is paid once.
+- `boss_check_gate` (service role): bosses won and whether the player already passed a check.
+- Trigger `assessment_attempts_boss_gate`: a check for stage 3 or above can't be started unless the
+  boss below is beaten or the player already passed that check.
+
 ## Implemented in Phase 5 Part A (quests)
 
 Migration `supabase/migrations/20261117000100_quests.sql` (tested offline; applied live). Quests

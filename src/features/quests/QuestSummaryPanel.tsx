@@ -34,7 +34,7 @@ export function QuestSummaryPanel({ campaignId }: { campaignId: string }) {
               <li key={q.key}>
                 <p className="text-xs uppercase tracking-wider text-smoke">{questKindLabel[q.kind]}</p>
                 <p className="font-serif text-ink">{q.title}</p>
-                <ProgressBar className="mt-1.5" value={n} max={q.objectives.length} label={`${q.title} progress`} caption={`${n} of ${q.objectives.length} steps · ${q.xp} XP`} />
+                <ProgressBar className="mt-1.5" value={n} max={q.objectives.length} label={`${q.title} progress`} caption={`${n} of ${q.objectives.length} steps${q.xp > 0 ? ` · ${q.xp} XP` : ''}`} />
               </li>
             );
           })}

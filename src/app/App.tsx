@@ -24,6 +24,7 @@ const CampaignPage = lazy(() => import('../pages/CampaignPage.tsx'));
 const LessonPage = lazy(() => import('../pages/LessonPage.tsx'));
 const CheckPage = lazy(() => import('../pages/CheckPage.tsx'));
 const QuestsPage = lazy(() => import('../pages/QuestsPage.tsx'));
+const BossPage = lazy(() => import('../pages/BossPage.tsx'));
 const CodexPage = lazy(() => import('../pages/CodexPage.tsx'));
 const WeaknessBankPage = lazy(() => import('../pages/WeaknessBankPage.tsx'));
 const InventoryPage = lazy(() => import('../pages/InventoryPage.tsx'));
@@ -110,6 +111,7 @@ export function App() {
                 <Route path="/campaigns/:campaignId/lesson/:lessonKey" element={<RequireCharacter><LessonPage /></RequireCharacter>} />
                 <Route path="/campaigns/:campaignId/check/:checkKey" element={<RequireCharacter><CheckPage /></RequireCharacter>} />
                 <Route path="/campaigns/:campaignId/quests" element={<RequireCharacter><QuestsPage /></RequireCharacter>} />
+                <Route path="/campaigns/:campaignId/boss/:stage" element={<RequireCharacter><BossPage /></RequireCharacter>} />
                 <Route path="/codex" element={<RequireCharacter><CodexPage /></RequireCharacter>} />
                 <Route path="/weaknesses" element={<RequireCharacter><WeaknessBankPage /></RequireCharacter>} />
                 <Route path="/inventory" element={<RequireCharacter><InventoryPage /></RequireCharacter>} />

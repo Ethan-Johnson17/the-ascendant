@@ -11,6 +11,7 @@ import { createLearningService } from '../../../src/services/learning/learningSe
 import { createRpcStore } from '../../../src/services/learning/rpcStore.ts';
 import { createExaminer } from '../../../src/services/ai/examinerService.ts';
 import { providerFromEnv } from '../../../src/services/ai/providerFromEnv.ts';
+import { createBossPlanner } from '../../../src/services/ai/bossPlanner.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -44,8 +45,10 @@ Deno.serve(async (req) => {
   }
 
   // AI settings are read per request, so changing a secret takes effect without a redeploy.
-  const examiner = createExaminer(store, providerFromEnv((name) => Deno.env.get(name)));
-  const result = await createLearningService(store, { examiner }).handle(data.user.id, body);
+  const provider = providerFromEnv((name) => Deno.env.get(name));
+  const examiner = createExaminer(store, provider);
+  const bossPlanner = createBossPlanner(store, provider);
+  const result = await createLearningService(store, { examiner, bossPlanner }).handle(data.user.id, body);
   if (result.status >= 500) console.error('learning: request failed', { status: result.status });
   return reply(result.status, result.body);
 });

@@ -2,8 +2,8 @@
 
 Status: **Phase 4 built (Milestones A, B and C).** The provider layer, limits, usage log and all seven
 roles (Tutor, Examiner, Progression Advisor, Researcher, Course Builder, Game Master, Strategist) are
-implemented and tested, and run live with Groq (`openai/gpt-oss-120b`). The Game Master and the
-Strategist have no screens yet: quests and bosses use them in Phase 5. Settings are read on every
+implemented and tested, and run live with Groq (`openai/gpt-oss-120b`). The Game Master tells quest
+stories (Phase 5 A) and the Strategist plans real boss battles (Phase 5 B1). Settings are read on every
 request, so changing a secret needs no redeploy.
 
 ## Current setup (Milestone A)
@@ -162,7 +162,14 @@ actions, "begin" (opens the first unfinished step) and "later". The reply goes t
 `checkScene` checks, is saved in `quest_stories`, and is returned from there afterwards, so each
 quest's story costs one request once. Locked quests have no story. The story never changes a quest.
 
-### Strategist (Milestone C part 3; no screen until Phase 5)
+### Strategist (Milestone C part 3; used in boss battles since Phase 5 B1)
+
+**In battles (B1):** starting a boss asks the Strategist for a plan from the `learning` function
+(`src/services/ai/bossPlanner.ts`), one request counted against the daily limit. The engine checks
+the plan again before using it. If the AI isn't configured, the player is out of requests, or the
+plan breaks a rule, the game uses its own plan instead (`gameBossPlan`, labelled "The game's own
+plan"), so a battle never waits on the AI. The plan is saved with the battle; victory and defeat
+text are shown only after the engine decides.
 Action `plan_boss`. Decided 2026-11-16: a boss uses only the course's existing, already-checked
 questions. The engine (`src/engine/encounters/bossPlan.ts`) owns the rules:
 - difficulty follows the player's mastery stage per competency: stages 1–2 → difficulty 1–2,

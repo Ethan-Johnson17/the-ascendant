@@ -86,7 +86,7 @@ const link = z.discriminatedUnion('kind', [
 ]);
 const questView = z.object({
   key: z.string(),
-  kind: z.enum(['learn', 'deepen', 'prepare', 'review', 'retention']),
+  kind: z.enum(['learn', 'deepen', 'prepare', 'review', 'retention', 'recover']),
   title: z.string(),
   summary: z.string(),
   competencyIds: z.array(z.string()),
@@ -105,6 +105,40 @@ const questsSchema = z.object({
   newlyCompleted: z.array(z.object({ key: z.string(), title: z.string(), xp: z.number().int() })),
 });
 export type QuestList = z.infer<typeof questsSchema>;
+
+const bossStatusView = z.discriminatedUnion('status', [
+  z.object({ stage: z.number().int(), status: z.literal('won') }),
+  z.object({ stage: z.number().int(), status: z.literal('active'), encounterId: z.string() }),
+  z.object({ stage: z.number().int(), status: z.literal('ready') }),
+  z.object({ stage: z.number().int(), status: z.literal('locked'), reason: z.string() }),
+  z.object({
+    stage: z.number().int(), status: z.literal('recover'),
+    recovery: z.object({ losses: z.number().int(), steps: z.array(z.object({ conceptId: z.string(), concept: z.string(), checkId: z.string(), done: z.boolean() })) }),
+  }),
+]);
+export type BossStatusView = z.infer<typeof bossStatusView>;
+const bossListSchema = z.object({ campaignStatus: z.enum(['active', 'paused', 'completed']), bosses: z.array(bossStatusView) });
+export type BossList = z.infer<typeof bossListSchema>;
+
+const battleSchema = z.object({
+  encounter: z.object({
+    id: z.string(), campaignId: z.string(), stage: z.number().int(), status: z.enum(['active', 'won', 'lost']),
+    resolve: z.number().int(), maxResolve: z.number().int(), position: z.number().int(), total: z.number().int(),
+    plan: z.object({
+      name: z.string(), epithet: z.string(), intro: z.array(z.string()),
+      rounds: z.array(z.object({ competencyId: z.string(), competencyName: z.string(), title: z.string(), narration: z.string().nullable(), questionIds: z.array(z.string()) })),
+      victory: z.string().nullable(), defeat: z.string().nullable(), removed: z.number().int(),
+    }),
+    planOrigin: z.enum(['ai', 'fixture', 'game']),
+    answered: z.array(z.object({ itemId: z.string(), correct: z.boolean() })),
+  }),
+  question: issuedItemSchema.nullable(),
+});
+export type BattleView = z.infer<typeof battleSchema>;
+const answerResultSchema = battleSchema.extend({
+  result: z.object({ correct: z.boolean(), answer: answerSchema, explanation: z.string(), weakness: z.string().nullable(), xp: z.number().int() }),
+});
+export type BossAnswerResult = z.infer<typeof answerResultSchema>;
 
 export type Outcome<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -140,6 +174,13 @@ export function createLearningClient(db: SupabaseClient) {
     completeLesson: (campaignId: string, activityId: string) => call(db, { action: 'complete_lesson', campaignId, activityId }, lessonSchema),
     /** The campaign's quests; quests the player has just finished are completed (with XP) by the server. */
     listQuests: (campaignId: string) => call(db, { action: 'list_quests', campaignId }, questsSchema),
+    /** Each boss's status for this player (the server decides). */
+    listBosses: (campaignId: string) => call(db, { action: 'list_bosses', campaignId }, bossListSchema),
+    /** Starts (or resumes) a battle. */
+    startBoss: (campaignId: string, stage: number) => call(db, { action: 'start_boss', campaignId, stage }, battleSchema),
+    viewBoss: (encounterId: string) => call(db, { action: 'view_boss', encounterId }, battleSchema),
+    /** Answers the current question; the correct answer comes back only after marking. */
+    answerBoss: (encounterId: string, position: number, answer: Answer | null) => call(db, { action: 'answer_boss', encounterId, position, answer }, answerResultSchema),
   };
 }
 export type LearningClient = ReturnType<typeof createLearningClient>;

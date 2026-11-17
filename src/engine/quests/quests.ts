@@ -1,5 +1,6 @@
 import { defaultProgressionConfig, type ProgressionConfig } from '../progression/config.ts';
 import { planXpAward, type XpAwardPlan } from '../progression/xpAward.ts';
+import type { Recovery } from '../encounters/boss.ts';
 
 /**
  * Quests (GAME_DESIGN.md "Quest and boss rules"): built by the engine from the course itself, the
@@ -12,13 +13,15 @@ import { planXpAward, type XpAwardPlan } from '../progression/xpAward.ts';
  *             the skills are at the stage below;
  * - prepare   every skill at Apprentice / Competent / Proficient (the boss gates, Part B);
  * - review    clear weak spots from the Weakness Bank (1, 3, 6, 10 cleared);
- * - retention pass spaced reviews when they are due (1, 3, 6, 10 passed).
+ * - retention pass spaced reviews when they are due (1, 3, 6, 10 passed);
+ * - recover   after a boss defeat: pass again a check on each concept missed. No XP: the retry is
+ *             the reward. Never recorded; it is worked out from the battle and the checks.
  *
  * Keys are derived from the course structure, so the same quest always has the same key and its XP
  * (`quest_completed:<campaign>/<key>`) can be paid only once.
  */
 
-export const questKinds = ['learn', 'deepen', 'prepare', 'review', 'retention'] as const;
+export const questKinds = ['learn', 'deepen', 'prepare', 'review', 'retention', 'recover'] as const;
 export type QuestKind = (typeof questKinds)[number];
 
 export const questConfig = {
@@ -205,9 +208,29 @@ export function buildQuests(course: QuestCourse, r: QuestRecords, config: Progre
   return quests;
 }
 
+/**
+ * Recovery quests after a boss defeat (GAME_DESIGN.md "Boss details"). Completed as soon as every
+ * step is done; they give no XP and are never recorded, so they can't be farmed.
+ */
+export function recoveryQuests(recoveries: readonly Recovery[], checkTitles: ReadonlyMap<string, string>, competencyIds: readonly string[] = []): Quest[] {
+  return recoveries.map((rec) => ({
+    key: `recover-${rec.stage}-${rec.losses}`,
+    kind: 'recover',
+    title: `Recover from the ${stageNames[rec.stage]} boss`,
+    summary: `The ${stageNames[rec.stage]} boss won this time. Pass a check again on each concept you missed, then face the boss once more. Nothing you have earned is lost.`,
+    competencyIds,
+    difficulty: rec.stage <= 2 ? 1 : rec.stage === 3 ? 2 : 3,
+    objectives: rec.steps.map((s) => ({ id: s.checkId, label: `${s.concept}: pass “${checkTitles.get(s.checkId) ?? 'the check'}” again`, done: s.done, link: { kind: 'check', activityId: s.checkId } as const })),
+    hints: ['Read the Codex entry for each missed concept before the check.', 'Your boss mistakes are also in your Weakness Bank.'],
+    xp: 0,
+    status: rec.done ? 'completed' : 'active',
+    lockedReason: null,
+  }));
+}
+
 /** XP plans for quests whose objectives are all met and that haven't been completed yet. */
 export function questsToComplete(quests: readonly Quest[], campaignId: string, config: ProgressionConfig = defaultProgressionConfig): { key: string; xp: XpAwardPlan }[] {
   return quests
-    .filter((q) => q.status === 'ready')
+    .filter((q) => q.status === 'ready' && q.kind !== 'recover')
     .map((q) => ({ key: q.key, xp: planXpAward({ kind: 'quest_completed', sourceId: `${campaignId}/${q.key}`, campaignId }, config) }));
 }

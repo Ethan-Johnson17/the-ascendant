@@ -17,6 +17,7 @@ export const questKindLabel: Record<QuestView['kind'], string> = {
   prepare: 'Boss preparation',
   review: 'Review quest',
   retention: 'Retention quest',
+  recover: 'Recovery quest',
 };
 const difficultyLabel = ['', 'Easy', 'Moderate', 'Hard'] as const;
 
@@ -62,9 +63,9 @@ export function QuestCard({ quest, campaignId, campaignActive, onStory }: { ques
   return (
     <article className={cn('rounded-panel border p-4 sm:p-5', completed ? 'border-iron/60 bg-obsidian/40' : locked ? 'border-iron/60 bg-obsidian/30' : 'border-iron bg-charcoal')}>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={quest.kind === 'prepare' ? 'gold' : quest.kind === 'review' ? 'warning' : quest.kind === 'retention' ? 'arcane' : 'neutral'}>{questKindLabel[quest.kind]}</Badge>
+        <Badge tone={quest.kind === 'prepare' ? 'gold' : quest.kind === 'review' ? 'warning' : quest.kind === 'retention' ? 'arcane' : quest.kind === 'recover' ? 'ember' : 'neutral'}>{questKindLabel[quest.kind]}</Badge>
         <Badge>{difficultyLabel[quest.difficulty]}</Badge>
-        <Badge tone="gold">{quest.xp} XP</Badge>
+        {quest.xp > 0 ? <Badge tone="gold">{quest.xp} XP</Badge> : <Badge>No XP</Badge>}
         {completed && <Badge tone="vital"><Check className="size-3" aria-hidden />Completed</Badge>}
         {locked && <Badge><Lock className="size-3" aria-hidden />Locked</Badge>}
       </div>

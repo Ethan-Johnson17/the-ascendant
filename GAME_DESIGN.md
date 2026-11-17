@@ -502,6 +502,21 @@ The AI must not independently award victories or alter character statistics.
   act on Resolve, rounds and questions as listed in "Race, class and background effects".
 - **After a defeat:** the game creates a **recovery quest** on the exact concepts the player missed.
   Finishing it allows a retry. No XP, levels, mastery or Codex progress is ever lost.
+- **Boss details (decided 2026-11-17):** a recovery quest gives **no XP**; the retry is its reward (so
+  losing on purpose earns nothing). A wrong boss answer goes into the **Weakness Bank** like a wrong
+  check answer. A boss that isn't finished waits for the player to return.
+- **How B1 works (built 2026-11-17):**
+  - A boss opens when every skill the course tests at that stage has reached the stage, the boss of
+    the stage below is beaten, and (for AI courses) every planned lesson is built.
+  - The battle uses 1–12 questions from the course's checks up to that stage, matched to the player's
+    mastery. The Strategist (AI) writes the story and order; if the AI isn't available, the game
+    makes its own plan ("The Apprentice Trial"). Each plan is labelled.
+  - The player starts with 3 Resolve. A wrong answer costs 1; at 0 the battle is lost. Answering the
+    last question with Resolve left wins: +200 XP once, and the next stage's checks open.
+  - After a defeat, the recovery quest asks the player to pass again a check covering each concept
+    missed; then the boss can be faced again. Nothing earned is taken away.
+  - A check passed before bosses existed stays open (for reviews), even above a boss gate.
+  - Not yet: race traits and class abilities in battle (B2).
 
 # 12. Failure and Recovery
 

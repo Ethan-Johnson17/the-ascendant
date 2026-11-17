@@ -1,6 +1,6 @@
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCharacterAs, createTestDb, serviceStore, type TestDb } from './testDb.ts';
+import { createCharacterAs, createTestDb, serviceStore, winBossesAs, type TestDb } from './testDb.ts';
 import { HOUR_MS } from '../../src/engine/learning/config.ts';
 import type { WrittenItem } from '../../src/engine/learning/curriculum.ts';
 import { createLearningService } from '../../src/services/learning/learningService.ts';
@@ -182,6 +182,7 @@ describe('without the Examiner', () => {
     assert.equal((land.body.items as object[]).length, 5);
 
     await setStage(campaignId, GEO, 4);
+    await winBossesAs(t, u, campaignId);
     const adv = await svc.handle(u, { action: 'start_check', campaignId, activityId: ADV_GEO });
     assert.equal(adv.status, 503);
     assert.equal(adv.body.code, 'examiner_unavailable');
@@ -201,6 +202,7 @@ describe('Advanced (stage 5) needs confidently marked written work', () => {
   it('two confident passes on separate days reach Advanced', async () => {
     const { u, campaignId } = await newPlayer();
     await setStage(campaignId, GEO, 4);
+    await winBossesAs(t, u, campaignId);
     const { svc, advanceHours } = serviceAt(new Date(), allMet);
     const first = await take(svc, u, campaignId, ADV_GEO);
     assert.equal(first.items.length, 2);
@@ -216,6 +218,7 @@ describe('Advanced (stage 5) needs confidently marked written work', () => {
   it('the database refuses Advanced without the Examiner’s marking, and uncounted attempts that change progress', async () => {
     const { u, campaignId } = await newPlayer();
     await setStage(campaignId, GEO, 4);
+    await winBossesAs(t, u, campaignId);
     const { svc } = serviceAt(new Date(), allMet);
     const start = await svc.handle(u, { action: 'start_check', campaignId, activityId: ADV_GEO });
     const items = start.body.items as { key: string }[];
