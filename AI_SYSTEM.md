@@ -1,10 +1,10 @@
 # The Ascendant — AI System
 
-Status: **Phase 4 Milestones A and B built; Milestone C parts 1 and 2 built.** The provider layer,
-limits, usage log, the Tutor, the Examiner, the Progression Advisor, the Researcher and the Course
-Builder are implemented and tested, and run live with Groq (`openai/gpt-oss-120b`). Settings are read
-on every request, so changing a secret needs no redeploy. Game Master / Strategist formats (C3): not
-started.
+Status: **Phase 4 built (Milestones A, B and C).** The provider layer, limits, usage log and all seven
+roles (Tutor, Examiner, Progression Advisor, Researcher, Course Builder, Game Master, Strategist) are
+implemented and tested, and run live with Groq (`openai/gpt-oss-120b`). The Game Master and the
+Strategist have no screens yet: quests and bosses use them in Phase 5. Settings are read on every
+request, so changing a secret needs no redeploy.
 
 ## Current setup (Milestone A)
 
@@ -143,6 +143,39 @@ answer keys come from the AI (backed only by the support quote). Competency mapp
 lesson can't be rebuilt yet. Groq's 8,000 tokens-per-minute limit means two players building at once
 may have to wait.
 
+### Game Master (Milestone C part 3; no screen until Phase 5)
+Action `narrate_scene`. The game supplies the scene: its title, purpose, characters (by id) and the
+only actions the player may take next. Until quests exist, the server uses one preview scene ("The
+guide at the gate"). The AI sees the campaign, the player's character (name, race and class inside
+`<story>`) and the player's message inside `<player>` (300 characters, last 2 turns). It replies with
+1–3 paragraphs of narration, lines for known characters, and a label for each offered action.
+
+Our code (`checkScene`) removes any line that claims a game result (XP, levels, marks, mastery,
+rewards, winning or losing, "the answer is"), lines from unknown characters and invented actions. If
+no narration is left, or an offered action has no label, nothing is shown. Choices always appear in
+the game's order. The Game Master changes nothing and nothing is saved.
+
+### Strategist (Milestone C part 3; no screen until Phase 5)
+Action `plan_boss`. Decided 2026-11-16: a boss uses only the course's existing, already-checked
+questions. The engine (`src/engine/encounters/bossPlan.ts`) owns the rules:
+- difficulty follows the player's mastery stage per competency: stages 1–2 → difficulty 1–2,
+  stage 3 → 1–3, stages 4+ → 2–3;
+- 3 to 5 rounds, 1 to 3 questions each, at most 12 in all, no question twice, every tested
+  competency at least once; multiple-choice, ordering and matching only (written answers wait for
+  Phase 5);
+- the engine picks which competencies are tested (those it can ask about, up to 5) and checks a fair
+  boss is possible before any AI request ("not ready" costs nothing).
+
+The Strategist sees only the allowed questions' prompts, concept and difficulty, numbered Q1, Q2 …,
+never their options, answers or database ids. It replies with a name, epithet, introduction, rounds
+(by C and Q number) and victory and defeat text (shown only after the engine decides, in Phase 5).
+Our code translates the numbers to ids and runs `checkBossPlan`; any problem means nothing is used,
+and the problem codes are logged (e.g. `plan: round_count`). Story lines that claim results are
+removed. The reply carries question ids only.
+
+Known limit: the story text isn't fact-checked; it can echo the topic of its questions. In Phase 5
+it is shown as flavour around the checked questions, which remain the only thing marked.
+
 ### Repair reasons
 When a reply fails its format check and gets its one repair attempt, `ai_requests.repair_reason`
 records why, as field paths and check codes only (for example `sources.0.why: too_small`, `not_json`,
@@ -154,10 +187,10 @@ Seven roles with separate interfaces, prompts and output schemas. They may share
 
 | Role | Input | Output (schema-validated) | May it change game state? |
 |---|---|---|---|
-| Game Master | Scene, quest, player message | Narration, NPC dialogue, suggested choices | No |
+| Game Master | Scene (from the game), player message | Narration, lines for known characters, labels for the game's actions | No — outcome claims, unknown characters and invented actions removed |
 | Tutor | Objective, codex context, player question | Explanation, examples, cited source IDs | No |
 | Examiner | Rubric, player response | Per-criterion scores, misconceptions, error category, confidence | No — produces *evidence* the engine judges |
-| Strategist | Curriculum, mastery, weaknesses | Scenario / boss phase drafts | No — drafts validated against content schema |
+| Strategist | Allowed checked questions (prompts only), competencies | Boss story and rounds by question number | No — the engine checks every plan against its rules |
 | Researcher | Concept title and summary | Candidate books, articles and pages | No — our code checks every suggestion; unconfirmed ones are never shown |
 | Progression Advisor | Progress, review schedule | Ranked recommendations | No |
 | Course Builder | Player's subject and goal; fetched article text | Outline; lesson sections and concepts with quotes; check questions | No — quotes checked by our code, lessons validated by the engine and saved by a server function |

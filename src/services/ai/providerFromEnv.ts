@@ -7,6 +7,8 @@ import { fixtureExaminerJudgement } from './roles/examiner.ts';
 import { fixtureResearch } from './roles/researcher.ts';
 import { courseRequestSchema, fixtureCheck, fixtureLesson, fixtureOutline } from './roles/courseBuilder.ts';
 import { fixtureTutorAnswer, tutorMaterialSchema } from './roles/tutor.ts';
+import { fixtureScene, type Scene } from './roles/gameMaster.ts';
+import { bossContextSchema, fixtureStrategy } from './roles/strategist.ts';
 import type { AiProvider } from './types.ts';
 
 /** Development fixtures for every role that has one. */
@@ -17,6 +19,12 @@ export function createDevelopmentFixtures(): AiProvider {
       return fixtureTutorAnswer(tutorMaterialSchema.parse(hint?.material), typeof hint?.question === 'string' ? hint.question : '');
     },
     researcher: () => fixtureResearch(),
+    game_master: (req) => {
+      const scene = (req.fixtureHint as { scene?: Scene } | undefined)?.scene;
+      if (!scene) throw new Error('The Game Master fixture needs the scene.');
+      return fixtureScene(scene);
+    },
+    strategist: (req) => fixtureStrategy(bossContextSchema.parse((req.fixtureHint as { context?: unknown } | undefined)?.context)),
     course_builder: (req) => {
       const hint = req.fixtureHint as { kind?: string; request?: unknown; articleText?: unknown; lessonText?: unknown; conceptCount?: unknown } | undefined;
       if (hint?.kind === 'outline') return fixtureOutline(courseRequestSchema.parse(hint.request));

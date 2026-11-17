@@ -36,6 +36,14 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 4 Milestone C part 3
+
+Migration `supabase/migrations/20261116000600_game_master_strategist.sql` (tested offline; applied
+live): two read-only, service-role functions. `ai_scene_context` returns the campaign's title and
+description and the player's character name, race and class. `ai_boss_context` returns the campaign's
+competencies with the player's mastery stage, and its non-written questions with prompt, concept,
+difficulty and kind, never options, answers or rubrics. No new tables; nothing is saved.
+
 ## Implemented in Phase 4 Milestone C part 2
 
 Migration `supabase/migrations/20261116000500_generated_subjects.sql` (tested offline; applied live):

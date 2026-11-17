@@ -1,5 +1,33 @@
 # Development Log
 
+## 2026-11-16 — Phase 4 Milestone C part 3: Game Master and Strategist formats
+
+**Product owner decisions:** groundwork only (nothing new on screen until Phase 5); bosses use only
+the course's already-checked questions.
+
+**Built:**
+- engine: `src/engine/encounters/bossPlan.ts` (difficulty from mastery, round and question rules,
+  readiness, plan check);
+- server: `roles/gameMaster.ts`, `roles/strategist.ts`; actions `narrate_scene` and `plan_boss` with a
+  shared "reserve, call, check, log" helper; fixtures for both;
+- database: migration `20261116000600_game_master_strategist.sql` (two read-only context functions);
+- browser: `narrateScene` and `planBoss` in `aiClient.ts`, not yet used by any screen.
+
+**Choices:**
+- *The game owns scenes and choices.* The Game Master only words them, so a quest's structure can't
+  be changed by the AI or by the player's message.
+- *Questions by number, not id or answer.* The Strategist never sees options or answers, so even a
+  leaked plan reveals nothing, and an invented number is caught at once.
+- *Difficulty rules live in the engine.* Boss difficulty follows the player's recorded mastery, as
+  GAME_DESIGN.md requires, and the AI can't change it.
+- *Two live fixes are prompt changes, not rule changes.* With a 2-competency course the AI planned
+  2 rounds; the engine refused it, and the prompt now says how to reach 3.
+- *Endpoints without screens.* The two actions exist so they could be tested live; they count
+  against the 30-a-day allowance like any AI request and change nothing.
+
+**Known limitations:** story text isn't fact-checked; the preview scene is the only scene until
+quests exist; competencies are chosen in database order until bosses define their own requirements.
+
 ## 2026-11-16 — Phase 4 Milestone C part 2: start a new subject
 
 **Product owner decisions:** short courses of 4 lessons; only harmful topics refused, health, law and

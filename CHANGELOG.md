@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Phase 4 Milestone C part 3
+- Behind the scenes, ready for quests and bosses (Phase 5): the Game Master (AI) narrates scenes
+  using only the game's characters and choices, and the Strategist (AI) designs bosses from your
+  course's own checked questions, with difficulty matched to your mastery. Nothing new on screen yet.
+
 ## Unreleased — Phase 4 Milestone C part 2
 - "Start a new subject": describe any subject and goal, and the Course Builder (AI) plans a short
   4-lesson course from Wikipedia. Each lesson and its check are written when you reach it, and every

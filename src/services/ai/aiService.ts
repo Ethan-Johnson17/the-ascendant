@@ -13,6 +13,10 @@ import { verifySource } from '../research/verify.ts';
 import { courseRequestSchema } from './roles/courseBuilder.ts';
 import { createSubjectService } from '../subjects/subjectService.ts';
 import { createWikipedia } from '../subjects/wikipedia.ts';
+import { buildGameMasterMessages, checkScene, gameMasterReplySchema, previewScene, sceneContextSchema } from './roles/gameMaster.ts';
+import { bossContextSchema, buildStrategistMessages, checkStrategy, strategistReplySchema, toBank } from './roles/strategist.ts';
+import { bossReadiness, focusBank } from '../../engine/encounters/bossPlan.ts';
+import type { AiRole } from './types.ts';
 
 /**
  * The server side of AI features: what the `ai` Edge Function runs for each request.
@@ -51,6 +55,16 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('create_subject'), request: courseRequestSchema }),
   z.object({ action: z.literal('build_lesson'), templateId: z.string().regex(/^ai-[a-z0-9]{6,40}$/) }),
+  z.object({
+    action: z.literal('narrate_scene'),
+    campaignId: z.uuid(),
+    message: z.string().trim().min(1).max(defaultAiConfig.gameMaster.maxMessageChars).nullable().default(null),
+    history: z
+      .array(z.object({ player: z.string().max(defaultAiConfig.gameMaster.maxMessageChars), narration: z.string().max(1500) }))
+      .max(defaultAiConfig.gameMaster.maxHistoryTurns)
+      .default([]),
+  }),
+  z.object({ action: z.literal('plan_boss'), campaignId: z.uuid() }),
   z.object({ action: z.literal('usage') }),
 ]);
 
@@ -89,6 +103,17 @@ const researcherFailure: Record<AiError['kind'] | 'internal', { status: number; 
   refused: { status: 422, error: 'The Researcher couldn’t suggest anything for this concept.' },
   internal: { status: 500, error: 'Something went wrong. Please try again.' },
 };
+
+/** Wording for the Game Master and the Strategist (no screens yet; Phase 5 uses them). */
+const roleFailure = (who: string): Record<AiError['kind'] | 'internal', { status: number; error: string }> => ({
+  not_configured: { status: 503, error: `The ${who} isn’t set up on this server yet.` },
+  timeout: { status: 504, error: `The ${who} took too long. Please try again later.` },
+  rate_limited: { status: 503, error: `The ${who} is resting: the shared free AI allowance is used up for now.` },
+  unavailable: { status: 503, error: `The ${who} can’t be reached right now. Please try again in a moment.` },
+  bad_output: { status: 502, error: `The ${who}’s reply didn’t follow the game’s rules, so it wasn’t used.` },
+  refused: { status: 422, error: `The ${who} couldn’t do that.` },
+  internal: { status: 500, error: 'Something went wrong. Please try again.' },
+});
 
 const advisorFailure: Record<AiError['kind'] | 'internal', { status: number; error: string }> = {
   not_configured: { status: 503, error: 'The Advisor isn’t set up on this server yet. Your next steps above still work.' },
@@ -302,6 +327,100 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
     };
   }
 
+  /**
+   * One request for a role whose reply our code then checks: reserve, call, check, log. `check`
+   * returns the response body, or a reason (field paths and codes only) when the reply broke a rule.
+   */
+  async function runChecked<T>(
+    userId: string,
+    campaignId: string,
+    role: AiRole,
+    who: string,
+    call: { schemaName: string; messages: ReturnType<typeof buildGameMasterMessages>; temperature: number; fixtureHint: unknown },
+    schema: z.ZodType<T>,
+    check: (data: T) => { body: Record<string, unknown> } | { reason: string },
+  ): Promise<AiResponse> {
+    const failure = roleFailure(who);
+    if (!provider) return { status: failure.not_configured.status, body: { error: failure.not_configured.error, code: 'not_configured' } };
+    const reservation = await log.reserve(userId, role, campaignId);
+    if (!reservation.ok) {
+      if (reservation.code === 'daily_limit') return { status: 429, body: { error: `You’ve used all ${config.dailyRequestsPerPlayer} AI requests for today.`, code: 'daily_limit', usage: await usage(userId) } };
+      return { status: 429, body: { error: 'That’s a lot of AI requests in one minute. Try again shortly.', code: 'minute_limit' } };
+    }
+    try {
+      const result = await runStructured(
+        provider,
+        { role, schemaName: call.schemaName, messages: call.messages, maxOutputTokens: config.maxOutputTokens[role] ?? 1500, temperature: call.temperature, fixtureHint: call.fixtureHint },
+        schema,
+        { transientRetries: config.transientRetries, ...(options.sleep ? { sleep: options.sleep } : {}) },
+      );
+      const checked = check(result.data);
+      const broke = 'reason' in checked;
+      await finish(userId, reservation.requestId, broke ? 'failed' : 'ok', {
+        origin: result.origin, usage: result.usage, attempts: result.attempts, model: result.model, errorKind: broke ? 'bad_output' : null,
+        repairReason: broke ? checked.reason.slice(0, 300) : result.repairReason,
+      });
+      if (broke) return { status: failure.bad_output.status, body: { error: failure.bad_output.error, code: 'bad_output' } };
+      return {
+        status: 200,
+        body: { ...checked.body, origin: result.origin, usage: { used: reservation.usedToday, limit: config.dailyRequestsPerPlayer, remaining: Math.max(0, config.dailyRequestsPerPlayer - reservation.usedToday) } },
+      };
+    } catch (err) {
+      const kind = err instanceof AiError ? err.kind : 'internal';
+      await finish(userId, reservation.requestId, 'failed', {
+        origin: provider.origin, usage: err instanceof AiError ? err.usage : noUsage, attempts: 0, model: provider.model, errorKind: kind,
+        repairReason: err instanceof AiError ? err.repairReason : null,
+      });
+      if (kind === 'internal') throw err;
+      return { status: failure[kind].status, body: { error: failure[kind].error, code: kind } };
+    }
+  }
+
+  /** The Game Master narrates the preview scene. It changes nothing and nothing is saved. */
+  async function narrateScene(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'narrate_scene' }>): Promise<AiResponse> {
+    const raw = await store.call('ai_scene_context', { p_user_id: userId, p_campaign_id: req.campaignId });
+    if (raw === null) return { status: 404, body: { error: 'That campaign was not found.' } };
+    const ctx = sceneContextSchema.parse(raw);
+    const scene = previewScene();
+    return runChecked(
+      userId, req.campaignId, 'game_master', 'Game Master',
+      { schemaName: 'game_master_scene', messages: buildGameMasterMessages(ctx, scene, req.message, req.history), temperature: 0.8, fixtureHint: { scene } },
+      gameMasterReplySchema,
+      (data) => {
+        const checked = checkScene(data, scene);
+        return checked ? { body: { scene: checked } } : { reason: 'scene: no_narration_or_missing_choice' };
+      },
+    );
+  }
+
+  /**
+   * The Strategist proposes a boss from the course's checked questions; the engine decides whether
+   * the plan is allowed. Nothing is saved (bosses arrive in Phase 5). The reply carries question
+   * ids only, never options or answers.
+   */
+  async function planBoss(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'plan_boss' }>): Promise<AiResponse> {
+    const raw = await store.call('ai_boss_context', { p_user_id: userId, p_campaign_id: req.campaignId });
+    if (raw === null) return { status: 404, body: { error: 'That campaign was not found.' } };
+    const full = bossContextSchema.parse(raw);
+    // The engine picks the competencies and checks a fair boss is possible before any AI request.
+    const focus = focusBank(toBank(full));
+    const keep = new Set(focus.competencies.map((c) => c.id));
+    const qKeep = new Set(focus.questions.map((q) => q.id));
+    const ctx = { ...full, competencies: full.competencies.filter((c) => keep.has(c.id)), questions: full.questions.filter((q) => qKeep.has(q.id)) };
+    if (!bossReadiness(focus).ready) {
+      return { status: 409, body: { error: 'This course doesn’t have enough checked questions for a boss yet. Build and study more lessons first.', code: 'not_ready' } };
+    }
+    return runChecked(
+      userId, req.campaignId, 'strategist', 'Strategist',
+      { schemaName: 'strategist_boss', messages: buildStrategistMessages(ctx), temperature: 0.7, fixtureHint: { context: ctx } },
+      strategistReplySchema,
+      (data) => {
+        const checked = checkStrategy(data, ctx);
+        return 'plan' in checked ? { body: { boss: checked.plan } } : { reason: `plan: ${checked.problems.join(',')}` };
+      },
+    );
+  }
+
   const subjects = createSubjectService({
     store, provider, config, log, now,
     wikipedia: createWikipedia(options.subjects?.fetch ?? ((input, init) => fetch(input, init)), options.subjects?.timeoutMs ?? 8000),
@@ -318,6 +437,8 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       if (req.data.action === 'research') return await research(userId, req.data);
       if (req.data.action === 'create_subject') return await subjects.create(userId, req.data.request);
       if (req.data.action === 'build_lesson') return await subjects.build(userId, req.data.templateId);
+      if (req.data.action === 'narrate_scene') return await narrateScene(userId, req.data);
+      if (req.data.action === 'plan_boss') return await planBoss(userId, req.data);
       return await askTutor(userId, req.data);
     } catch (err) {
       if (err instanceof z.ZodError) return { status: 500, body: { error: 'The game data came back in an unexpected shape. Please try again later.' } };
