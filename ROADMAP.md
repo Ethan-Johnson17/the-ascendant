@@ -191,7 +191,13 @@ three parts:
 | A | Quests: templates built from each course, objectives and success conditions, completion records, XP, Game Master narration, quest screen | Completed; tested offline and live (2026-11-17) |
 | B1 | Boss battles: one per stage, each gating the next stage's checks; unlock rules, Resolve combat, victory reward, defeat → recovery quest (no XP) → retry, boss mistakes into the Weakness Bank, battle result screen. Decided 2026-11-17: built in two steps | Completed; tested offline; deployed; battle not yet played live (no ready boss on the test account) |
 | B2 | Race traits and class abilities in boss battles. Decided 2026-11-17: hint removes a wrong option; Adaptable swaps the question; Scout Ahead shows the next round's ideas; Arcane Recall opens the current question's Codex entry | Completed; tested offline; deployed; not yet used in a live battle |
-| C | Practical projects and free-form talk with characters; "go deeper" for AI-made courses (harder checks, so they can pass Competent) | Not started |
+| C1 | "Go deeper" for AI-made courses: a Proficient check and an Advanced (written) check for each lesson, written from the same source article, built when the player reaches them. Decided 2026-11-17 (to be reviewed again later, see below) | In progress |
+| C2 | Practical projects: one written task per topic, marked by the Examiner (AI) against a rubric; counts as Advanced evidence; one-time XP. Decided 2026-11-17 | Not started |
+| C3 | Free talk with characters (the Game Master): story only, never XP or progress; 1 AI request per message; may point to lessons and quests. Decided 2026-11-17 | Not started |
+
+**Bookmarked for review (product owner, 2026-11-17):** "go deeper" starts as harder checks on the
+same lessons. Revisit later whether AI courses should also get new, deeper lessons from further
+sources.
 ## Phase 6 — First playable campaign: History / Ancient Mesopotamia — *Not started*
 ## Phase 7 — Presentation and cinematics — *Not started*
 ## Phase 8 — Testing and release preparation — *Not started*

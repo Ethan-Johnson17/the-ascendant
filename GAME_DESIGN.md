@@ -512,6 +512,14 @@ The AI must not independently award victories or alter character statistics.
 - **Boss details (decided 2026-11-17):** a recovery quest gives **no XP**; the retry is its reward (so
   losing on purpose earns nothing). A wrong boss answer goes into the **Weakness Bank** like a wrong
   check answer. A boss that isn't finished waits for the player to return.
+- **Part C decisions (2026-11-17):** three steps.
+  - C1 "go deeper": AI-made courses get, for each lesson, a Proficient check and an Advanced
+    (written-answer) check written from the same source article, so they can pass Competent and
+    beyond. *Bookmarked by the product owner for review later* (whether to add new, deeper lessons).
+  - C2 practical projects: one written task per topic, marked by the Examiner (AI) against a rubric;
+    it counts as evidence for Advanced and gives a one-time XP reward.
+  - C3 free talk with characters (the Game Master): story only. It never gives XP or changes
+    progress; each message uses 1 daily AI request; characters may point to lessons and quests.
 - **How B1 works (built 2026-11-17):**
   - A boss opens when every skill the course tests at that stage has reached the stage, the boss of
     the stage below is beaten, and (for AI courses) every planned lesson is built.
