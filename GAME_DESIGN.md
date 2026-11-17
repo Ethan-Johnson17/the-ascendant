@@ -502,6 +502,9 @@ The AI must not independently award victories or alter character statistics.
   act on Resolve, rounds and questions as listed in "Race, class and background effects".
 - **After a defeat:** the game creates a **recovery quest** on the exact concepts the player missed.
   Finishing it allows a retry. No XP, levels, mastery or Codex progress is ever lost.
+- **Boss details (decided 2026-11-17):** a recovery quest gives **no XP**; the retry is its reward (so
+  losing on purpose earns nothing). A wrong boss answer goes into the **Weakness Bank** like a wrong
+  check answer. A boss that isn't finished waits for the player to return.
 
 # 12. Failure and Recovery
 

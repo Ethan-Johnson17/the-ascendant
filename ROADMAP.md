@@ -189,7 +189,8 @@ three parts:
 | Part | Contents | Status |
 |---|---|---|
 | A | Quests: templates built from each course, objectives and success conditions, completion records, XP, Game Master narration, quest screen | Completed; tested offline and live (2026-11-17) |
-| B | Boss battles: one per stage, each gating the next stage's checks; unlock rules, Resolve combat, race traits and class abilities, victory reward, defeat → recovery quest → retry, battle result screen | Not started |
+| B1 | Boss battles: one per stage, each gating the next stage's checks; unlock rules, Resolve combat, victory reward, defeat → recovery quest (no XP) → retry, boss mistakes into the Weakness Bank, battle result screen. Decided 2026-11-17: built in two steps | Planned |
+| B2 | Race traits and class abilities in boss battles | Not started |
 | C | Practical projects and free-form talk with characters; "go deeper" for AI-made courses (harder checks, so they can pass Competent) | Not started |
 ## Phase 6 — First playable campaign: History / Ancient Mesopotamia — *Not started*
 ## Phase 7 — Presentation and cinematics — *Not started*
