@@ -482,8 +482,13 @@ The AI must not independently award victories or alter character statistics.
   course itself (for example "study these lessons and pass their check", "clear weak spots in the
   Weakness Bank"), with fixed objectives, success conditions and XP. The Game Master narrates it.
   Quests work for every subject, and without AI.
-- **One boss per course, at the end.** It unlocks when **every skill it tests has reached Apprentice
-  (stage 2)**.
+- **A boss at each stage (revised 2026-11-16; replaces "one boss per course").** Bosses are the gates
+  between stages. When every skill a course's boss tests has reached **Apprentice**, the Apprentice
+  boss opens; beating it unlocks the course's **Competent** checks. The Competent boss (every skill at
+  Competent) unlocks the **Proficient** checks, and the Proficient boss unlocks the **Advanced**
+  checks. Each boss is harder than the last. Beating a boss never ends the course.
+- Consequence: a skill can't pass the next stage's gate on its own; every tested skill must reach
+  the stage first. Progress already earned before bosses existed is kept.
 - **Resolve:** the player starts a boss battle with **3 Resolve** (Dwarves 4). Each wrong answer costs
   1; at 0 the player is defeated. Getting through every round wins. Race traits and class abilities
   act on Resolve, rounds and questions as listed in "Race, class and background effects".
