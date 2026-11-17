@@ -36,6 +36,20 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 5 Part B2 (race traits and class abilities)
+
+Migration `supabase/migrations/20261117000300_boss_powers.sql` (tested offline; applied live):
+- `boss_encounters` gains `powers_used` (each power once per battle) and `effects` (what used powers
+  revealed: hints by question, the scouted round, the recalled concept). Up to 13 questions, since
+  Lucky can add one.
+- `boss_powers_of` (service role): the player's race trait and class ability.
+- `boss_create_encounter` now refuses any starting Resolve other than 3, or 4 for a Dwarf.
+- `boss_use_power` (service role): records a power the player chose, checking it is theirs and
+  unused, and that Adaptable changes only the current question and Gambit only moves it to the end.
+- `boss_record_answer` now accepts an automatic power (Sanctuary, Lucky, Second Wind) only when the
+  player has it unused and it fits the answer, and Lucky's one new question only right after the
+  current one.
+
 ## Implemented in Phase 5 Part B1 (boss battles)
 
 Migration `supabase/migrations/20261117000200_boss_battles.sql` (tested offline; applied live):

@@ -4,6 +4,7 @@ import { gradeItem, type Answer } from '../learning/grading.ts';
 import { applyAnswerToWeakness, type WeaknessEvent, type WeaknessState } from '../learning/weakness.ts';
 import { planXpAward, type XpAwardPlan } from '../progression/xpAward.ts';
 import { bossReadiness, bossRules, eligibleQuestions, focusBank, type BossBank } from './bossPlan.ts';
+import { automaticEffect, baseResolve, type PowerId } from './powers.ts';
 
 /**
  * Boss battles (GAME_DESIGN.md "Quest and boss rules"). One boss per stage gate: the Apprentice
@@ -17,7 +18,7 @@ import { bossReadiness, bossRules, eligibleQuestions, focusBank, type BossBank }
 
 export const bossStages = [2, 3, 4] as const;
 export type BossStage = (typeof bossStages)[number];
-export const bossConfig = { startingResolve: 3 } as const;
+export const bossConfig = { startingResolve: baseResolve, maxQuestionsWithLucky: bossRules.maxQuestions + 1 } as const;
 
 /** A check for `targetStage` may be started only once the boss of the stage below is beaten. */
 export function bossGateOpen(targetStage: number, wonStages: ReadonlySet<number>): boolean {
@@ -177,8 +178,12 @@ export interface EncounterState {
   readonly stage: number;
   readonly status: 'active' | 'won' | 'lost';
   readonly resolve: number;
+  readonly maxResolve: number;
   readonly position: number;
   readonly questionIds: readonly string[];
+  /** The player's race trait and class ability, and those already used in this battle. */
+  readonly powers: readonly PowerId[];
+  readonly powersUsed: readonly PowerId[];
 }
 
 export interface BossAnswerOutcome {
@@ -189,6 +194,10 @@ export interface BossAnswerOutcome {
   readonly conceptId: string;
   readonly weakness: { readonly state: WeaknessState; readonly event: WeaknessEvent } | null;
   readonly xp: XpAwardPlan | null;
+  /** The automatic power that acted on this answer, if any. */
+  readonly power: 'sanctuary' | 'lucky' | 'second_wind' | null;
+  /** The battle's questions after this answer (Lucky adds one right after this one). */
+  readonly questionIds: readonly string[];
 }
 
 export type BossRefusal = { ok: false; code: 'not_active' | 'wrong_question' | 'campaign_inactive'; message: string };
@@ -196,6 +205,8 @@ export type BossRefusal = { ok: false; code: 'not_active' | 'wrong_question' | '
 /**
  * One answer in a battle. Wrong costs 1 Resolve; at 0 the battle is lost. Answering the last
  * question with Resolve left wins. The answer also counts in the Weakness Bank, like a check answer.
+ * Automatic powers (Sanctuary, Lucky, Second Wind) act here; `luckyQuestionId` is the new question
+ * Lucky would offer (see `luckyQuestion`), or null.
  */
 export function resolveBossAnswer(
   state: EncounterState,
@@ -204,6 +215,7 @@ export function resolveBossAnswer(
   answer: Answer | null,
   weakness: WeaknessState | null,
   now: Date,
+  luckyQuestionId: string | null = null,
   config: LearningConfig = defaultLearningConfig,
 ): ({ ok: true } & BossAnswerOutcome) | BossRefusal {
   if (campaignStatus !== 'active') return { ok: false, code: 'campaign_inactive', message: 'Resume this campaign to continue the battle.' };
@@ -211,11 +223,16 @@ export function resolveBossAnswer(
   if (state.questionIds[state.position] !== item.key) return { ok: false, code: 'wrong_question', message: 'That isn’t the current question.' };
   if (item.kind === 'written') return { ok: false, code: 'wrong_question', message: 'Bosses don’t use written questions yet.' };
   const result = gradeItem(item, answer);
-  const resolve = result.correct ? state.resolve : state.resolve - 1;
+  const lucky = luckyQuestionId !== null && !state.questionIds.includes(luckyQuestionId) && state.questionIds.length < bossConfig.maxQuestionsWithLucky;
+  const effect = automaticEffect(result.correct, state.powers, new Set(state.powersUsed), state.resolve, state.maxResolve, lucky);
+  const resolve = state.resolve + effect.delta;
   const position = state.position + 1;
-  const status = resolve <= 0 ? 'lost' : position >= state.questionIds.length ? 'won' : 'active';
+  const questionIds = effect.power === 'lucky'
+    ? [...state.questionIds.slice(0, position), luckyQuestionId!, ...state.questionIds.slice(position)]
+    : state.questionIds;
+  const status = resolve <= 0 ? 'lost' : position >= questionIds.length ? 'won' : 'active';
   const w = applyAnswerToWeakness(weakness, result, now, config);
   const changed = w.state && w.event !== 'none' && w.event !== 'not_due' ? { state: w.state, event: w.event } : null;
   const xp = status === 'won' ? planXpAward({ kind: 'boss_defeated', sourceId: `${state.campaignId}/stage-${state.stage}`, campaignId: state.campaignId }) : null;
-  return { ok: true, correct: result.correct, resolve, position, status, conceptId: item.concept, weakness: changed, xp };
+  return { ok: true, correct: result.correct, resolve, position, status, conceptId: item.concept, weakness: changed, xp, power: effect.power, questionIds };
 }

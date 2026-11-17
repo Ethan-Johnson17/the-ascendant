@@ -1,5 +1,31 @@
 # Development Log
 
+## 2026-11-17 — Phase 5 Part B2: race traits and class abilities
+
+**Product owner decisions (2026-11-17):** Keen Insight removes a wrong option; Adaptable swaps the
+current question for one on another skill; Scout Ahead shows the next round's skill and ideas;
+Arcane Recall opens the current question's Codex entry. Recorded in GAME_DESIGN.md.
+
+**Built:**
+- engine: `src/engine/encounters/powers.ts` (who has which power, effects, hints, question swaps);
+  automatic powers in `resolveBossAnswer`;
+- server: powers in `src/services/bosses/bossService.ts`; action `use_boss_power`;
+- database: migration `20261117000300_boss_powers.sql`;
+- screens: the battle page lists your powers before you begin, shows a button for each power you
+  choose to use, the hint, the scouted round and the recalled Codex entry, and says when an
+  automatic power saved you; character creation texts match the rules.
+
+**Choices (mine, within the design):**
+- *Automatic or chosen.* Stalwart, Lucky, Second Wind and Sanctuary act on their own (a choice
+  would add a pause with nothing to decide); the other five are buttons.
+- *Sanctuary before Lucky,* so a Halfling Cleric gets both.
+- *Lucky and Adaptable use only questions the boss may already ask* (same difficulty rules), and do
+  nothing if there are none left; Lucky's miss still counts in the Weakness Bank.
+- *No AI.* Every effect is worked out by the engine, so powers cost no AI requests.
+
+**Known limitations:** no power has been used in a live battle yet; Arcane Recall shows the entry
+already readable in the Codex (it saves a trip, it doesn't unlock anything hidden).
+
 ## 2026-11-17 — Phase 5 Part B1: boss battles
 
 **Product owner decisions (2026-11-17):** two steps (B1 battles, B2 race traits and class

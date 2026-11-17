@@ -16,7 +16,7 @@ export function allAnswered(items: readonly IssuedItem[], answers: Record<string
   });
 }
 
-export function ItemInput({ item, value, onChange }: { item: IssuedItem; value: Answer | undefined; onChange: (v: Answer) => void }) {
+export function ItemInput({ item, value, onChange, struck = [] }: { item: IssuedItem; value: Answer | undefined; onChange: (v: Answer) => void; struck?: readonly string[] }) {
   if (item.kind === 'written') {
     const text = typeof value === 'string' ? value : '';
     const id = `answer-${item.key}`;
@@ -44,17 +44,23 @@ export function ItemInput({ item, value, onChange }: { item: IssuedItem; value: 
       <div role="radiogroup" aria-label="Choose one answer" className="grid gap-2">
         {item.options.map((o) => {
           const selected = value === o.key;
+          const out = struck.includes(o.key);
           return (
             <button
               key={o.key}
               type="button"
               role="radio"
               aria-checked={selected}
+              disabled={out}
               onClick={() => onChange(o.key)}
-              className={cn('flex min-h-12 items-center gap-3 rounded-control border px-4 py-2 text-left transition-colors', selected ? 'border-gold-400 bg-gold-600/20 text-gold-100' : 'border-iron bg-obsidian text-ink hover:border-gold-600')}
+              className={cn(
+                'flex min-h-12 items-center gap-3 rounded-control border px-4 py-2 text-left transition-colors',
+                out ? 'cursor-not-allowed border-iron/50 bg-obsidian/40 text-smoke line-through' : selected ? 'border-gold-400 bg-gold-600/20 text-gold-100' : 'border-iron bg-obsidian text-ink hover:border-gold-600',
+              )}
             >
               <span className={cn('size-4 shrink-0 rounded-full border-2', selected ? 'border-gold-300 bg-gold-300' : 'border-smoke')} aria-hidden />
               {o.text}
+              {out && <span className="sr-only"> (ruled out by your hint)</span>}
             </button>
           );
         })}

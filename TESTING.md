@@ -39,6 +39,29 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-17 — Phase 5 Part B2 (race traits and class abilities)
+Automated: **315 tests, 315 passing**; typecheck and production build clean.
+
+New unit tests (`src/engine/encounters/powers.test.ts`): character creation describes each power
+exactly as the battle rules do; one race trait and one class ability per player; only a Dwarf gets
+extra Resolve; automatic powers act once (Sanctuary before Lucky; Lucky only with a question to
+offer; Second Wind only below full Resolve); Lucky and Adaptable pick only unused, allowed questions;
+Gambit never moves the last question; Keen Insight never gives the answer.
+
+New database tests (`supabase/tests/bossPowers.test.ts`, a two-skill course): Dwarf starts at 4
+Resolve; Sanctuary, Second Wind and Lucky as above (Lucky adds a new question on the same skill and
+the miss still goes into the Weakness Bank); Adaptable, Keen Insight (the hint survives resuming),
+Gambit, Scout Ahead and Arcane Recall; each power once per boss; no using another player's powers or
+automatic ones by hand; the database refuses powers the player lacks, reused powers, forged question
+lists and extra Resolve for non-Dwarves.
+
+Changed: test characters can now be any race and class; the B1 battle tests use a Human Ranger,
+whose powers act only when chosen.
+
+Live (after deploying): `list_bosses` for the test account (a Halfling Rogue) lists Lucky and
+Gambit. **Not yet tried live:** using a power in a real battle (no boss on the test account is
+ready yet).
+
 ### 2026-11-17 — Phase 5 Part B1 (boss battles)
 Automated: **295 tests, 295 passing**; typecheck and production build clean.
 

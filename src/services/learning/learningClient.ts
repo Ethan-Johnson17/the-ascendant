@@ -117,7 +117,15 @@ const bossStatusView = z.discriminatedUnion('status', [
   }),
 ]);
 export type BossStatusView = z.infer<typeof bossStatusView>;
-const bossListSchema = z.object({ campaignStatus: z.enum(['active', 'paused', 'completed']), bosses: z.array(bossStatusView) });
+const powerView = z.object({ id: z.string(), name: z.string(), source: z.enum(['race', 'class']), description: z.string(), active: z.boolean(), used: z.boolean() });
+export type PowerView = z.infer<typeof powerView>;
+const bossListSchema = z.object({ campaignStatus: z.enum(['active', 'paused', 'completed']), powers: z.array(powerView).default([]), bosses: z.array(bossStatusView) });
+const hintView = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('remove_option'), optionKey: z.string() }),
+  z.object({ kind: z.literal('place'), entryKey: z.string(), position: z.number().int() }),
+  z.object({ kind: z.literal('pair'), leftKey: z.string(), rightKey: z.string() }),
+]);
+export type HintView = z.infer<typeof hintView>;
 export type BossList = z.infer<typeof bossListSchema>;
 
 const battleSchema = z.object({
@@ -131,12 +139,17 @@ const battleSchema = z.object({
     }),
     planOrigin: z.enum(['ai', 'fixture', 'game']),
     answered: z.array(z.object({ itemId: z.string(), correct: z.boolean() })),
+    powers: z.array(powerView).default([]),
+    lastPower: z.string().nullable().default(null),
+    hint: hintView.nullable().default(null),
+    scout: z.object({ roundIndex: z.number().int(), title: z.string(), competencyName: z.string(), concepts: z.array(z.string()) }).nullable().default(null),
+    recall: z.object({ itemId: z.string(), conceptId: z.string() }).nullable().default(null),
   }),
   question: issuedItemSchema.nullable(),
 });
 export type BattleView = z.infer<typeof battleSchema>;
 const answerResultSchema = battleSchema.extend({
-  result: z.object({ correct: z.boolean(), answer: answerSchema, explanation: z.string(), weakness: z.string().nullable(), xp: z.number().int() }),
+  result: z.object({ correct: z.boolean(), answer: answerSchema, explanation: z.string(), weakness: z.string().nullable(), xp: z.number().int(), power: z.enum(['sanctuary', 'lucky', 'second_wind']).nullable().default(null) }),
 });
 export type BossAnswerResult = z.infer<typeof answerResultSchema>;
 
@@ -180,6 +193,8 @@ export function createLearningClient(db: SupabaseClient) {
     startBoss: (campaignId: string, stage: number) => call(db, { action: 'start_boss', campaignId, stage }, battleSchema),
     viewBoss: (encounterId: string) => call(db, { action: 'view_boss', encounterId }, battleSchema),
     /** Answers the current question; the correct answer comes back only after marking. */
+    /** Uses a race trait or class ability the player chooses (once per boss). */
+    useBossPower: (encounterId: string, position: number, power: string) => call(db, { action: 'use_boss_power', encounterId, position, power }, battleSchema),
     answerBoss: (encounterId: string, position: number, answer: Answer | null) => call(db, { action: 'answer_boss', encounterId, position, answer }, answerResultSchema),
   };
 }

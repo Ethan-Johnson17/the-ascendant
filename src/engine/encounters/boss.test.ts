@@ -104,7 +104,7 @@ describe('boss answers', () => {
     key, concept: 'rivers', difficulty: 1, kind: 'single_choice', prompt: 'P', explanation: 'E',
     options: [{ key: 'a', text: 'A' }, { key: 'b', text: 'B', errorCategory: 'related_concept_confusion' }], answer: 'a',
   }) as unknown as AssessmentItem;
-  const state = (over: Partial<EncounterState> = {}): EncounterState => ({ id: 'e', campaignId: 'camp', stage: 2, status: 'active', resolve: 3, position: 0, questionIds: ['q1', 'q2', 'q3'], ...over });
+  const state = (over: Partial<EncounterState> = {}): EncounterState => ({ id: 'e', campaignId: 'camp', stage: 2, status: 'active', resolve: 3, maxResolve: 3, position: 0, questionIds: ['q1', 'q2', 'q3'], powers: [], powersUsed: [], ...over });
 
   it('a wrong answer costs 1 Resolve and opens a weak spot; a right one costs nothing', () => {
     const wrong = resolveBossAnswer(state(), 'active', item('q1'), 'b', null, at(1));

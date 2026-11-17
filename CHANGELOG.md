@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — Phase 5 Part B2
+- Your race and class now matter in boss battles. Each gives one power, once per boss:
+  - Human, Adaptable: swap the question for one on another skill.
+  - Elf, Keen Insight: a wrong option is crossed out.
+  - Dwarf, Stalwart: 4 Resolve instead of 3.
+  - Halfling, Lucky: your first mistake costs nothing, and you get a new question on that skill.
+  - Fighter, Second Wind: a correct answer after a mistake restores 1 Resolve.
+  - Ranger, Scout Ahead: see the next round's skill and ideas.
+  - Rogue, Gambit: skip a question and face it at the end.
+  - Wizard, Arcane Recall: read the question's Codex entry.
+  - Cleric, Sanctuary: your first mistake costs no Resolve.
+- Character creation describes each power the same way.
+
 ## Unreleased — Phase 5 Part B1
 - Boss battles: each course has a boss at Apprentice, Competent and Proficient. A boss opens when
   every skill it tests has reached its stage. Answer its questions with 3 Resolve; each mistake costs 1.
