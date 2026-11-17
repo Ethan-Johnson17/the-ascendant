@@ -11,6 +11,7 @@ import type { Examiner, ExaminerMarking } from '../ai/examinerService.ts';
 import { listQuests } from '../quests/questService.ts';
 import { createBossService, type BossPlanner } from '../bosses/bossService.ts';
 import { bossGateOpen } from '../../engine/encounters/boss.ts';
+import { activePowers } from '../../engine/encounters/powers.ts';
 
 /**
  * The server side of learning: what the `learning` Edge Function runs for each request.
@@ -43,6 +44,7 @@ export const learningRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('list_bosses'), campaignId: z.uuid() }),
   z.object({ action: z.literal('start_boss'), campaignId: z.uuid(), stage: z.number().int().min(2).max(4) }),
   z.object({ action: z.literal('view_boss'), encounterId: z.uuid() }),
+  z.object({ action: z.literal('use_boss_power'), encounterId: z.uuid(), position: z.number().int().min(0).max(20), power: z.enum(activePowers) }),
   z.object({ action: z.literal('answer_boss'), encounterId: z.uuid(), position: z.number().int().min(0).max(20), answer: answerSchema.nullable() }),
 ]);
 export type LearningRequest = z.infer<typeof learningRequestSchema>;
@@ -390,6 +392,8 @@ export function createLearningService(store: LearningStore, options: LearningSer
           return await bosses.start(userId, req.data.campaignId, req.data.stage);
         case 'view_boss':
           return await bosses.view(userId, req.data.encounterId);
+        case 'use_boss_power':
+          return await bosses.usePower(userId, req.data.encounterId, req.data.position, req.data.power);
         case 'answer_boss':
           return await bosses.answer(userId, req.data.encounterId, req.data.position, req.data.answer);
       }

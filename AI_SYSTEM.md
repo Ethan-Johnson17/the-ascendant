@@ -167,7 +167,7 @@ quest's story costs one request once. Locked quests have no story. The story nev
 **In battles (B1):** starting a boss asks the Strategist for a plan from the `learning` function
 (`src/services/ai/bossPlanner.ts`), one request counted against the daily limit. The engine checks
 the plan again before using it. If the AI isn't configured, the player is out of requests, or the
-plan breaks a rule, the game uses its own plan instead (`gameBossPlan`, labelled "The game's own
+plan breaks a rule, the game uses its own plan instead. Race traits and class abilities use no AI (`gameBossPlan`, labelled "The game's own
 plan"), so a battle never waits on the AI. The plan is saved with the battle; victory and defeat
 text are shown only after the engine decides.
 Action `plan_boss`. Decided 2026-11-16: a boss uses only the course's existing, already-checked

@@ -89,12 +89,12 @@ export function serviceStore(db: TestDb): LearningStore {
 export const PILOT = 'history-early-civilizations';
 
 /** Inserts a valid character for the player, as the player would. */
-export async function createCharacterAs(t: TestDb, userId: string, name = 'Enheduanna', backgroundId = 'scholar') {
+export async function createCharacterAs(t: TestDb, userId: string, name = 'Enheduanna', backgroundId = 'scholar', raceId = 'human', classId = 'cleric') {
   return t.asUser(userId, async (tx) => {
     const res = await tx.query<{ id: string }>(
       `insert into public.characters (name, race_id, class_id, background_id, tincture_id)
-       values ($1, 'human', 'cleric', $2, 'azure') returning id`,
-      [name, backgroundId],
+       values ($1, $3, $4, $2, 'azure') returning id`,
+      [name, backgroundId, raceId, classId],
     );
     return res.rows[0]!.id;
   });

@@ -41,10 +41,11 @@ before(async () => {
 const svc = (withPlanner = false) =>
   createLearningService(serviceStore(t), { bossPlanner: withPlanner ? createBossPlanner(serviceStore(t), createDevelopmentFixtures(), { sleep: async () => {} }) : null });
 
-async function newPlayer(stages: Record<string, number> = {}) {
+/** Battle-rule tests use a Human Ranger: both of their powers are ones the player chooses to use. */
+async function newPlayer(stages: Record<string, number> = {}, race = 'human', cls = 'ranger', template = TEMPLATE) {
   const u = await t.createUser();
-  await createCharacterAs(t, u);
-  const campaignId = await t.asUser(u, async (tx) => (await tx.query<{ id: string }>(`insert into public.campaigns (template_id) values ($1) returning id`, [TEMPLATE])).rows[0]!.id);
+  await createCharacterAs(t, u, 'Enheduanna', 'scholar', race, cls);
+  const campaignId = await t.asUser(u, async (tx) => (await tx.query<{ id: string }>(`insert into public.campaigns (template_id) values ($1) returning id`, [template])).rows[0]!.id);
   for (const [competency, stage] of Object.entries(stages)) {
     await t.db.query(
       `insert into public.competency_progress (campaign_id, competency_id, user_id, mastery_stage) values ($1, $2, $3, $4)

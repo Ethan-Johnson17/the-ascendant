@@ -134,18 +134,25 @@ when boss encounters are built (Phase 5).
 
 | Race | Trait (in boss encounters) |
 |---|---|
-| Human | **Adaptable:** once per boss, answer a check with a different competency the player has mastered |
-| Elf | **Keen Insight:** one free hint per boss |
-| Dwarf | **Stalwart:** +1 Resolve (staying power) per encounter |
-| Halfling | **Lucky:** once per boss, retry a failed check with a new question |
+| Human | **Adaptable:** once per boss, swap the current question for one on a different skill this boss tests |
+| Elf | **Keen Insight:** once per boss, a hint: a wrong option is crossed out, an item placed or a pair filled in |
+| Dwarf | **Stalwart:** starts every boss battle with 1 extra Resolve |
+| Halfling | **Lucky:** the first wrong answer costs no Resolve, and a new question on the same skill comes next |
 
 | Class | Signature attributes (story flavour only) | Ability (once per boss) |
 |---|---|---|
-| Fighter | STR, CON | **Second Wind:** a correct answer restores 1 Resolve |
-| Ranger | DEX, WIS | **Scout Ahead:** preview which competencies the next phase tests |
-| Rogue | DEX, CHA | **Gambit:** skip a question and face it later |
-| Wizard | INT, WIS | **Arcane Recall:** open one Codex entry mid-battle |
+| Fighter | STR, CON | **Second Wind:** the first correct answer after losing Resolve restores 1 |
+| Ranger | DEX, WIS | **Scout Ahead:** see the next round's skill and the ideas its questions cover |
+| Rogue | DEX, CHA | **Gambit:** skip the current question and face it at the end |
+| Wizard | INT, WIS | **Arcane Recall:** open the Codex entry for the current question |
 | Cleric | WIS, CHA | **Sanctuary:** the first wrong answer costs no Resolve |
+
+Details decided 2026-11-17 (Phase 5 B2): Keen Insight removes a wrong option (or places one item, or
+fills one pair); Adaptable swaps the question; Scout Ahead shows the next round's ideas; Arcane
+Recall opens the current question's Codex entry. Stalwart, Lucky, Second Wind and Sanctuary act on
+their own; the other five are buttons the player chooses when to use. Each works once per boss. A
+mistake saved by Sanctuary or Lucky still goes into the Weakness Bank. Powers never change XP,
+mastery, or which answers are right.
 
 | Background | Starting gear (cosmetic in MVP) | Story effect |
 |---|---|---|
@@ -516,7 +523,8 @@ The AI must not independently award victories or alter character statistics.
   - After a defeat, the recovery quest asks the player to pass again a check covering each concept
     missed; then the boss can be faced again. Nothing earned is taken away.
   - A check passed before bosses existed stays open (for reviews), even above a boss gate.
-  - Not yet: race traits and class abilities in battle (B2).
+  - Race traits and class abilities act in battle (built in B2, 2026-11-17; see "Race, class and
+    background effects").
 
 # 12. Failure and Recovery
 

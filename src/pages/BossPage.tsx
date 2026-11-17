@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Check, Cog, FlaskConical, Shield, ShieldOff, Sparkles, Swords, Trophy, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Cog, Compass, Eye, FlaskConical, Shield, ShieldOff, Sparkles, Swords, Trophy, X, Zap } from 'lucide-react';
 import { useGame } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Panel } from '../components/ui/Panel.tsx';
@@ -11,9 +11,11 @@ import { Notice } from '../components/ui/Notice.tsx';
 import { ProgressBar } from '../components/ui/ProgressBar.tsx';
 import { ItemInput, allAnswered, describeAnswer } from '../features/learning/ItemInput.tsx';
 import { bossStageName, useBosses } from '../features/bosses/useBosses.ts';
+import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
 import { bossConfig } from '../engine/encounters/boss.ts';
 import type { Answer } from '../engine/learning/grading.ts';
-import type { BattleView, BossAnswerResult, IssuedItem } from '../services/learning/learningClient.ts';
+import type { BattleView, BossAnswerResult, HintView, IssuedItem, PowerView } from '../services/learning/learningClient.ts';
+import type { CodexEntryView } from '../services/learning/learningData.ts';
 import { cn } from '../utils/cn.ts';
 
 type Feedback = { result: BossAnswerResult['result']; question: IssuedItem; given: Answer | null; next: BattleView };
@@ -33,6 +35,12 @@ const weaknessNote: Record<string, string> = {
   resolved: 'A weak spot cleared from your Weakness Bank.',
 };
 
+const powerNote: Record<string, string> = {
+  sanctuary: 'Sanctuary: this mistake cost no Resolve.',
+  lucky: 'Lucky: no Resolve lost, and a new question on this skill comes next.',
+  second_wind: 'Second Wind: +1 Resolve.',
+};
+
 /** A boss battle: the plan's story, one question at a time, Resolve, and the result. */
 export default function BossPage() {
   const { campaignId, stage: stageParam } = useParams();
@@ -40,6 +48,7 @@ export default function BossPage() {
   const game = useGame();
   const campaign = game.player.campaigns.find((c) => c.id === campaignId);
   const { load, reload, api } = useBosses(campaignId);
+  const { load: learning } = useCampaignLearning(campaignId);
   const [phase, setPhase] = useState<Phase>({ name: 'waiting' });
   const [answer, setAnswer] = useState<Answer | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -93,6 +102,18 @@ export default function BossPage() {
     if (next.encounter.status !== 'active') void reloadGame();
   };
 
+  const usePower = async (battle: BattleView, power: string) => {
+    if (!api || busy) return;
+    setBusy(true);
+    setError(null);
+    const r = await api.useBossPower(battle.encounter.id, battle.encounter.position, power);
+    setBusy(false);
+    if (!r.ok) return setError(r.error);
+    // Adaptable and Gambit bring a different question; the others keep the answer in progress.
+    if (r.data.question?.key !== battle.question?.key) show(r.data);
+    else setPhase({ name: 'question', battle: r.data });
+  };
+
   const proceed = (f: Feedback) => {
     if (f.next.encounter.status !== 'active') {
       setPhase({ name: 'ended', battle: f.next, xp: f.result.xp });
@@ -124,10 +145,21 @@ export default function BossPage() {
         </Notice>
       )}
 
-      {phase.name === 'ready' && <Ready stage={stage} busy={busy} paused={load.state === 'ready' && load.data.campaignStatus !== 'active'} onBegin={() => void begin()} />}
+      {phase.name === 'ready' && (
+        <Ready stage={stage} busy={busy} paused={load.state === 'ready' && load.data.campaignStatus !== 'active'} powers={load.state === 'ready' ? load.data.powers : []} onBegin={() => void begin()} />
+      )}
       {phase.name === 'intro' && <Intro battle={phase.battle} onContinue={() => setPhase({ name: 'question', battle: phase.battle })} />}
       {phase.name === 'question' && phase.battle.question && (
-        <QuestionView battle={phase.battle} question={phase.battle.question} answer={answer} onAnswer={setAnswer} busy={busy} onSubmit={() => void submit(phase.battle)} />
+        <QuestionView
+          battle={phase.battle}
+          question={phase.battle.question}
+          answer={answer}
+          onAnswer={setAnswer}
+          busy={busy}
+          onSubmit={() => void submit(phase.battle)}
+          onPower={(p) => void usePower(phase.battle, p)}
+          codex={learning.state === 'ready' ? learning.data.codex : []}
+        />
       )}
       {phase.name === 'feedback' && <FeedbackView feedback={phase.feedback} onContinue={() => proceed(phase.feedback)} />}
       {phase.name === 'ended' && <Ended battle={phase.battle} xp={phase.xp} campaignId={campaignId ?? ''} />}
@@ -156,7 +188,22 @@ function ResolveMeter({ resolve, max }: { resolve: number; max: number }) {
   );
 }
 
-function Ready({ stage, busy, paused, onBegin }: { stage: number; busy: boolean; paused: boolean; onBegin: () => void }) {
+function PowerList({ powers }: { powers: readonly PowerView[] }) {
+  if (powers.length === 0) return null;
+  return (
+    <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+      {powers.map((p) => (
+        <li key={p.id} className="rounded-control border border-iron bg-charcoal/60 p-3">
+          <p className="flex items-center gap-2 text-gold-200"><Zap className="size-4" aria-hidden />{p.name}</p>
+          <p className="mt-1 text-sm text-ash">{p.description}</p>
+          <p className="mt-1 text-xs text-smoke">{p.source === 'race' ? 'Race trait' : 'Class ability'} · {p.active ? 'you choose when' : 'acts on its own'}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Ready({ stage, busy, paused, powers, onBegin }: { stage: number; busy: boolean; paused: boolean; powers: readonly PowerView[]; onBegin: () => void }) {
   return (
     <Panel eyebrow="Before you begin" title="How the battle works" tone="accent">
       <ul className="ml-5 list-disc space-y-1.5 text-ash">
@@ -165,6 +212,8 @@ function Ready({ stage, busy, paused, onBegin }: { stage: number; busy: boolean;
         <li>Mistakes go into your Weakness Bank. If you lose, nothing you have earned is taken away: a recovery quest shows what to practise before trying again.</li>
         <li>You can leave and come back; the battle waits for you.</li>
       </ul>
+      {powers.length > 0 && <p className="mt-4 text-sm uppercase tracking-wider text-gold-500">Your powers in this battle (each once per boss)</p>}
+      <PowerList powers={powers} />
       <Button className="mt-5" size="lg" onClick={onBegin} disabled={busy || paused} icon={<Swords className="size-5" aria-hidden />}>
         {busy ? 'The boss approaches…' : 'Begin the battle'}
       </Button>
@@ -189,18 +238,52 @@ function Intro({ battle, onContinue }: { battle: BattleView; onContinue: () => v
   );
 }
 
-function currentRound(battle: BattleView) {
-  let seen = 0;
-  for (const [i, r] of battle.encounter.plan.rounds.entries()) {
-    if (battle.encounter.position < seen + r.questionIds.length) return { round: r, index: i, first: battle.encounter.position === seen };
-    seen += r.questionIds.length;
-  }
-  return null;
+/** The round the current question belongs to (powers can reorder questions, so look it up by id). */
+function currentRound(battle: BattleView, questionKey: string) {
+  const index = battle.encounter.plan.rounds.findIndex((r) => r.questionIds.includes(questionKey));
+  const round = battle.encounter.plan.rounds[index];
+  if (!round) return null;
+  const answered = new Set(battle.encounter.answered.map((a) => a.itemId));
+  return { round, index, first: !round.questionIds.some((id) => answered.has(id)) };
 }
 
-function QuestionView({ battle, question, answer, onAnswer, busy, onSubmit }: { battle: BattleView; question: IssuedItem; answer: Answer | undefined; onAnswer: (a: Answer) => void; busy: boolean; onSubmit: () => void }) {
+function hintText(question: IssuedItem, hint: HintView): string {
+  if (hint.kind === 'remove_option' && question.kind === 'single_choice') return `“${question.options.find((o) => o.key === hint.optionKey)?.text ?? 'One option'}” is wrong.`;
+  if (hint.kind === 'place' && question.kind === 'ordering') return `“${question.entries.find((x) => x.key === hint.entryKey)?.text ?? 'One item'}” comes ${hint.position === 0 ? 'first' : `at position ${hint.position + 1}`}.`;
+  if (hint.kind === 'pair' && question.kind === 'matching') {
+    return `“${question.left.find((l) => l.key === hint.leftKey)?.text ?? '?'}” matches “${question.right.find((r) => r.key === hint.rightKey)?.text ?? '?'}”.`;
+  }
+  return 'A hint for this question.';
+}
+
+const powerIcon: Record<string, typeof Zap> = { adaptable: Swords, keen_insight: Eye, scout_ahead: Compass, gambit: Zap, arcane_recall: BookOpen };
+
+function PowerBar({ powers, busy, onPower }: { powers: readonly PowerView[]; busy: boolean; onPower: (id: string) => void }) {
+  if (powers.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2" aria-label="Your powers">
+      {powers.map((p) => {
+        if (!p.active) return <Badge key={p.id} tone={p.used ? 'neutral' : 'arcane'}><Zap className="size-3" aria-hidden />{p.name}{p.used ? ' · used' : ' · ready'}</Badge>;
+        const Icon = powerIcon[p.id] ?? Zap;
+        return (
+          <Button key={p.id} variant="secondary" disabled={busy || p.used} onClick={() => onPower(p.id)} icon={<Icon className="size-4" aria-hidden />} title={p.description}>
+            {p.used ? `${p.name} (used)` : p.name}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuestionView({ battle, question, answer, onAnswer, busy, onSubmit, onPower, codex }: {
+  battle: BattleView; question: IssuedItem; answer: Answer | undefined; onAnswer: (a: Answer) => void; busy: boolean; onSubmit: () => void;
+  onPower: (id: string) => void; codex: readonly CodexEntryView[];
+}) {
   const e = battle.encounter;
-  const at = currentRound(battle);
+  const at = currentRound(battle, question.key);
+  const recall = e.recall && e.recall.itemId === question.key ? e.recall : null;
+  const recalled = recall ? codex.find((c) => c.id === recall.conceptId) : undefined;
+  const scout = e.scout && at && e.scout.roundIndex > at.index ? e.scout : null;
   return (
     <form
       className="space-y-5"
@@ -223,9 +306,27 @@ function QuestionView({ battle, question, answer, onAnswer, busy, onSubmit }: { 
           </motion.div>
         </AnimatePresence>
       )}
+      <PowerBar powers={e.powers} busy={busy} onPower={onPower} />
+      {scout && (
+        <Notice title={`Scouted: round ${scout.roundIndex + 1}, ${scout.title}`}>
+          {scout.competencyName}. Ideas ahead: {scout.concepts.join(', ') || 'unknown'}.
+        </Notice>
+      )}
+      {recalled && (
+        <Panel tone="raised" className="border-arcane/40">
+          <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-arcane"><BookOpen className="size-4" aria-hidden />Arcane Recall · Codex</p>
+          <h3 className="mt-1 font-serif text-lg text-ink">{recalled.title}</h3>
+          <p className="mt-1 text-ash">{recalled.summary}</p>
+          <div className="mt-2 space-y-2 text-sm text-ash">{recalled.explanation.map((p, i) => <p key={i}>{p}</p>)}</div>
+        </Panel>
+      )}
+      {recall && !recalled && <Notice>Arcane Recall: the Codex entry is loading or isn’t available.</Notice>}
       <Panel as="section" tone="raised">
         <h3 className="font-serif text-xl leading-snug text-ink">{question.prompt}</h3>
-        <div className="mt-4"><ItemInput item={question} value={answer} onChange={onAnswer} /></div>
+        {e.hint && <p className="mt-2 flex items-center gap-2 text-sm text-arcane"><Eye className="size-4" aria-hidden />Keen Insight: {hintText(question, e.hint)}</p>}
+        <div className="mt-4">
+          <ItemInput item={question} value={answer} onChange={onAnswer} struck={e.hint?.kind === 'remove_option' ? [e.hint.optionKey] : []} />
+        </div>
       </Panel>
       <Button type="submit" size="lg" disabled={busy || answer === undefined || !allAnswered([question], { [question.key]: answer })} icon={<Check className="size-5" aria-hidden />}>
         {busy ? 'Marking…' : 'Answer'}
@@ -243,7 +344,7 @@ function FeedbackView({ feedback: f, onContinue }: { feedback: Feedback; onConti
       <Panel tone="raised" className={cn(f.result.correct ? 'border-vital/50' : 'border-warning/50')}>
         <p className={cn('flex items-center gap-2 font-display text-lg', f.result.correct ? 'text-vital' : 'text-warning')}>
           {f.result.correct ? <Check className="size-5" aria-hidden /> : <X className="size-5" aria-hidden />}
-          {f.result.correct ? 'A telling blow' : 'The boss strikes back: −1 Resolve'}
+          {f.result.correct ? 'A telling blow' : f.result.power ? 'The boss strikes, but you hold firm' : 'The boss strikes back: −1 Resolve'}
         </p>
         <p className="mt-3 font-serif text-ink">{f.question.prompt}</p>
         <dl className="mt-3 grid gap-2 text-sm">
@@ -251,6 +352,7 @@ function FeedbackView({ feedback: f, onContinue }: { feedback: Feedback; onConti
           {!f.result.correct && <div><dt className="text-smoke">Correct answer</dt><dd className="text-ink">{describeAnswer(f.question, f.result.answer)}</dd></div>}
         </dl>
         <p className="mt-3 text-sm text-ash">{f.result.explanation}</p>
+        {f.result.power && powerNote[f.result.power] && <p className="mt-2 flex items-center gap-2 text-sm text-arcane"><Zap className="size-4" aria-hidden />{powerNote[f.result.power]}</p>}
         {f.result.weakness && weaknessNote[f.result.weakness] && <p className="mt-2 text-sm text-smoke">{weaknessNote[f.result.weakness]}</p>}
       </Panel>
       <Button size="lg" onClick={onContinue}>{over ? 'See the outcome' : 'Next question'}</Button>
