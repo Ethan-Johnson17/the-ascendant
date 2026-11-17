@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 5 Part B1
+- Boss battles: each course has a boss at Apprentice, Competent and Proficient. A boss opens when
+  every skill it tests has reached its stage. Answer its questions with 3 Resolve; each mistake costs 1.
+  Win for +200 XP; the next stage's checks open.
+- Checks above Apprentice now need the boss below beaten first. Checks you have already passed stay open.
+- Lose, and nothing you've earned is taken away: a recovery quest (no XP) shows which checks to pass
+  again before you try once more. Boss mistakes go into the Weakness Bank.
+- The Strategist (AI) writes each boss's story; if the AI isn't available, the game makes its own plan.
+- A boss panel on the campaign page, and a battle page with a victory or defeat screen.
+
 ## Unreleased — Phase 5 Part A
 - Quests: every course now has learning, mastery, boss-preparation, review and retention quests,
   built from its own lessons and checks. They complete on their own as you learn (+40 XP each, once).

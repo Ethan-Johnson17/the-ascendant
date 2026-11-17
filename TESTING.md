@@ -32,12 +32,43 @@ Run all automated tests: `npm test`
 | Weakness not cleared by one correct answer | Tested (`learning.test.ts`, `supabase/tests/learning.test.ts`) |
 | Answer keys never reach the player before marking | Tested (column permission + `publicItem`) |
 | Submitted checks cannot be changed | Tested (trigger, even for server code) |
-| Bosses cannot unlock prematurely | Not started (Phase 5) |
-| Boss failure does not erase permanent progression | Not started (Phase 5) |
+| Bosses cannot unlock prematurely | Tested (`boss.test.ts`, `supabase/tests/bosses.test.ts`): skills must be at the stage, the boss below beaten, the course fully built; the database refuses a higher boss and higher checks too |
+| Boss failure does not erase permanent progression | Tested (`supabase/tests/bosses.test.ts`): a defeat changes no XP and no stage; checks already passed stay open |
 | Users cannot access other users' records | Tested offline (`security.test.ts`); re-checked on the live project in Milestone B |
 | AI outputs cannot bypass engine rules | Tested: Tutor can't change state (`supabase/tests/ai.test.ts`); Examiner marks only through engine rules and database checks (`written.test.ts`) |
 
 ## Current results
+
+### 2026-11-17 — Phase 5 Part B1 (boss battles)
+Automated: **295 tests, 295 passing**; typecheck and production build clean.
+
+New unit tests (`src/engine/encounters/boss.test.ts`): the check gate (Novice and Apprentice never
+gated; higher stages need the boss below); boss status (locked until every tested skill is at the
+stage, the boss below is beaten and the course is fully built; ready; won and active first; no boss
+for a stage without checks); recovery after a defeat (one step per check, done only by a pass after
+the defeat); the game's own plan follows the plan rules; a boss uses checks up to its stage only;
+answers (wrong costs 1 Resolve and opens a weak spot, lost at 0 with no XP, win on the last question
+with XP key `boss_defeated:<campaign>/stage-<n>`, refusals); recovery quests give no XP and are
+never recorded.
+
+New database tests (`supabase/tests/bosses.test.ts`): a new player's bosses are locked; Competent
+checks refused before the Apprentice boss, by the server and by the database trigger; a higher boss
+can't be created first; a battle starts with no answer key and no outcome text, and starting again
+resumes it; the Strategist fixture's plan is used and labelled; a victory pays 200 XP once and opens
+the Competent checks; a defeat takes no XP or stage away, opens weak spots, asks for recovery, and
+the recovery quest (no XP, never recorded) completes when the check is passed again; answers only in
+order, once each; the database refuses forged Resolve, results and XP; a check already passed stays
+open; battles are private and players can't write or record them.
+
+Changed: `written.test.ts` records boss wins (`winBossesAs`) before starting Advanced checks.
+
+Live (test account, 2026-11-17, after deploying): `list_bosses` on Mesopotamia shows the Apprentice
+boss locked ("Agriculture and settlement is not there yet") and the higher bosses waiting for it; on
+the AI course (Volcanoes) the boss waits for 2 unbuilt lessons. The campaign page shows the boss
+panel; the battle page shows the reason. The Competent check this account passed before bosses
+existed stays open. **Not yet tried live:** a full battle, because no live boss is ready yet and
+making one ready would mean changing the account's real progress. The battle itself is covered by
+the database tests above.
 
 ### 2026-11-17 — Phase 5 Part A (quests)
 Automated: **269 tests, 269 passing**; typecheck and production build clean.

@@ -1,5 +1,37 @@
 # Development Log
 
+## 2026-11-17 — Phase 5 Part B1: boss battles
+
+**Product owner decisions (2026-11-17):** two steps (B1 battles, B2 race traits and class
+abilities); recovery quests give no XP; boss mistakes go into the Weakness Bank; an unfinished battle
+waits. Recorded in GAME_DESIGN.md.
+
+**Built:**
+- engine: `src/engine/encounters/boss.ts` (gate, status, recovery, the game's own plan, answers);
+  recovery quests in `src/engine/quests/quests.ts`;
+- server: `src/services/bosses/bossService.ts` and `src/services/ai/bossPlanner.ts`; actions
+  `list_bosses`, `start_boss`, `view_boss`, `answer_boss` in the learning function; the check gate in
+  `start_check`;
+- database: migration `20261117000200_boss_battles.sql`;
+- screens: boss panel on the campaign page, battle page (`/campaigns/:id/boss/:stage`) with intro,
+  Resolve, rounds, feedback after each answer and a result screen; locked checks say when a boss is
+  the reason; question inputs moved to `src/features/learning/ItemInput.tsx` (shared with checks).
+
+**Choices:**
+- *Battles are stored, recovery isn't.* Each battle and each answer is recorded; the recovery quest is
+  worked out from the last defeat and the checks passed since, so it can't be farmed.
+- *Bosses don't need the AI.* The Strategist is asked once per battle; any failure falls back to the
+  game's own plan, labelled as such.
+- *One question at a time,* with the correct answer and explanation shown only after each answer.
+- *Earned stages are never taken away.* A check passed before bosses existed stays open for
+  reviews, even above a boss gate (the test account's Mesopotamia Competent check is one).
+- *The database checks the gate too* (a trigger on new check attempts), not just the server.
+
+**Known limitations:** a full battle hasn't been played live yet (no boss on the test account is
+ready); written questions aren't used in battles; AI courses only have checks up to Competent, so
+they have at most an Apprentice boss until Part C's "go deeper"; race traits and class abilities
+arrive in B2.
+
 ## 2026-11-17 — Phase 5 Part A: quests
 
 **Product owner decisions (2026-11-16):** quests from game templates with AI story; a boss at each

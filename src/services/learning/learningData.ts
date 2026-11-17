@@ -5,6 +5,7 @@ import { masteryStages, type MasteryStage } from '../../engine/character/attribu
 import { certaintyLevels, sourceTypes, type Certainty } from '../../engine/learning/curriculum.ts';
 import { defaultLearningConfig, errorCategories, type DifficultyPreference, type ErrorCategory } from '../../engine/learning/config.ts';
 import { checkUnlocked, countSpacedPasses } from '../../engine/learning/mastery.ts';
+import { bossGateOpen } from '../../engine/encounters/boss.ts';
 import { retentionStatus, type RetentionStatus } from '../../engine/learning/retention.ts';
 import { isWeaknessDue, reviewPriority, type WeaknessState } from '../../engine/learning/weakness.ts';
 import { RepositoryError, friendlyDbError } from '../game/gameRepository.ts';
@@ -99,6 +100,8 @@ const rowSchemas = {
   ),
   attempts: z.array(z.object({ id: z.string(), activity_id: z.string(), started_at: ts, submitted_at: ts.nullable(), passed: z.boolean().nullable(), score: z.number().nullable(), counted: z.boolean().default(true) })),
   campaign: z.object({ difficulty_preference: z.union([z.literal(-1), z.literal(0), z.literal(1)]) }),
+  /** Bosses beaten in this campaign (the stage gate). */
+  bossWins: z.array(z.object({ stage: z.number().int() })).default([]),
 };
 
 export type LearningRows = { [K in keyof typeof rowSchemas]: z.input<(typeof rowSchemas)[K]> };
@@ -163,6 +166,8 @@ export interface CheckView {
   /** Questions in each attempt that are written answers, marked by the Examiner (AI). */
   readonly writtenCount: number;
   readonly unlocked: boolean;
+  /** Locked only because the boss of the stage below isn't beaten yet. */
+  readonly bossLocked: boolean;
   readonly passes: number;
   readonly bestScore: number | null;
   /** Any competency this check covers has a retention review due now. */
@@ -269,6 +274,7 @@ export function buildCampaignLearning(p: Parsed, now: Date): CampaignLearning {
   const completed = new Set(p.completions.map((c) => c.activity_id));
   const submitted = p.attempts.filter((a) => a.submitted_at !== null);
   const activityRows = new Map(p.activities.map((a) => [a.id, a] as const));
+  const wonBosses = new Set(p.bossWins.map((b) => b.stage));
 
   const weaknessStates = p.weaknesses.map<WeaknessState>((w) => ({
     concept: w.concept_id, status: w.status, errorCategory: w.error_category, occurrenceCount: w.occurrence_count,
@@ -297,10 +303,14 @@ export function buildCampaignLearning(p: Parsed, now: Date): CampaignLearning {
       const passes = submitted.filter((t) => t.activity_id === a.id && t.passed);
       // Attempts that didn't count (unsure marking) say nothing about the player's best.
       const scores = submitted.filter((t) => t.activity_id === a.id && t.counted).map((t) => t.score ?? 0);
+      const stageOk = a.competency_ids.every((c) => checkUnlocked(stageOf(c), target));
+      // The boss gate; a check already passed can always be taken again (reviews).
+      const bossLocked = stageOk && !bossGateOpen(target, wonBosses) && !passes.some((t) => t.counted);
       activities.set(a.id, {
         kind: 'assessment', id: a.id, key: keyOf(a.id), title: a.title, competencyIds: a.competency_ids, targetStage: target,
         targetStageName: masteryStages[target - 1] ?? '', questionCount: a.question_count ?? 0, writtenCount: a.written_count,
-        unlocked: a.competency_ids.every((c) => checkUnlocked(stageOf(c), target)),
+        unlocked: stageOk && !bossLocked,
+        bossLocked,
         passes: passes.length,
         bestScore: scores.length ? Math.max(...scores) : null,
         reviewDue: a.competency_ids.some((c) => retentionStatus(retentionOf(c), now) === 'due'),
@@ -426,11 +436,12 @@ export async function loadCampaignLearning(db: SupabaseClient, campaign: { id: s
     cid ? own(db.from('weakness_records').select('concept_id, status, error_category, occurrence_count, correct_reviews, next_review_at, last_mistake_at, last_successful_review, resolved_at').eq('campaign_id', cid)) : none,
     cid ? own(db.from('assessment_attempts').select('id, activity_id, started_at, submitted_at, passed, score, counted').eq('campaign_id', cid).order('started_at')) : none,
     cid ? own(db.from('campaigns').select('difficulty_preference').eq('id', cid).single()) : Promise.resolve({ data: { difficulty_preference: 0 }, error: null }),
+    cid ? own(db.from('boss_encounters').select('stage').eq('campaign_id', cid).eq('status', 'won')) : none,
   ]);
   for (const r of results) if (r.error) throw friendlyDbError(r.error);
-  const [nodes, activities, codex, sources, competencies, subSkills, progress, completions, concepts, weaknesses, attempts, campaignRow] = results.map((r) => r.data);
+  const [nodes, activities, codex, sources, competencies, subSkills, progress, completions, concepts, weaknesses, attempts, campaignRow, bossWins] = results.map((r) => r.data);
   return buildCampaignLearning(
-    parseLearningRows({ nodes, activities, codex, sources, competencies, subSkills, progress, completions, concepts, weaknesses, attempts, campaign: campaignRow } as LearningRows),
+    parseLearningRows({ nodes, activities, codex, sources, competencies, subSkills, progress, completions, concepts, weaknesses, attempts, campaign: campaignRow, bossWins } as LearningRows),
     now,
   );
 }

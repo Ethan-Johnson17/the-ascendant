@@ -30,6 +30,9 @@ about 800–1,500 input and 530–630 output tokens. One request each.
 
 Quest story, measured 2026-11-17: about 610 input and 270 output tokens, once per quest.
 
+Boss battle (Phase 5 B1): one Strategist request when a battle starts (same size as the boss plan
+above). Answering costs no AI requests. Without AI the game makes its own plan, at no cost.
+
 ### Login emails (Supabase Auth)
 Supabase's built-in email sender is for testing only: it sends just a handful of emails per hour
 and only reliably to the project team's addresses. Sign-up confirmations and password resets for

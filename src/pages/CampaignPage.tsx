@@ -14,6 +14,7 @@ import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts
 import { useCourses } from '../features/subjects/CoursesProvider.tsx';
 import { GeneratedLabels, SubjectPlanPanel } from '../features/subjects/SubjectPanels.tsx';
 import { QuestSummaryPanel } from '../features/quests/QuestSummaryPanel.tsx';
+import { BossPanel } from '../features/bosses/BossPanel.tsx';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { masteryStages } from '../engine/character/attributeGrowth.ts';
 import type { DifficultyPreference } from '../engine/learning/config.ts';
@@ -87,6 +88,7 @@ export default function CampaignPage() {
                 />
               )}
               {!isSample && <QuestSummaryPanel campaignId={campaign!.id} />}
+              {!isSample && <BossPanel campaignId={campaign!.id} />}
               <Panel eyebrow="Campaign progress" title="Level">
                 <LevelProgress totalXp={campaign!.campaignXp} curve={defaultProgressionConfig.campaignLevels} label="Campaign" compact />
               </Panel>
@@ -150,7 +152,9 @@ function ActivityRow({ activity: a, campaignId }: { activity: ActivityView; camp
           {a.kind === 'lesson'
             ? <span className="inline-flex items-center gap-1"><Clock className="size-3" aria-hidden />{a.minutes} min · {a.completed ? 'Read' : 'Lesson'}</span>
             : locked
-              ? `Locked: reach ${masteryStages[a.targetStage - 2] ?? 'the previous stage'} first`
+              ? a.bossLocked
+                ? `Locked: beat the ${masteryStages[a.targetStage - 2] ?? 'previous'} boss first`
+                : `Locked: reach ${masteryStages[a.targetStage - 2] ?? 'the previous stage'} first`
               : `${a.questionCount} questions · proves ${a.targetStageName}${a.passes ? ` · passed ${a.passes}×, best ${Math.round((a.bestScore ?? 0) * 100)}%` : ''}`}
         </p>
       </div>

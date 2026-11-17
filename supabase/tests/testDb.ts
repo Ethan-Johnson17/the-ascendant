@@ -106,3 +106,17 @@ export async function startCampaignAs(t: TestDb, userId: string, templateId = PI
     return res.rows[0]!.id;
   });
 }
+
+/**
+ * Records boss wins directly (as the database owner), for tests that start checks above the boss
+ * gates without playing the battles. Real battles are tested in bosses.test.ts.
+ */
+export async function winBossesAs(t: TestDb, userId: string, campaignId: string, stages: readonly number[] = [2, 3, 4]) {
+  for (const stage of stages) {
+    await t.db.query(
+      `insert into public.boss_encounters (user_id, campaign_id, stage, status, plan, plan_origin, question_ids, max_resolve, resolve, position, ended_at)
+       values ($1, $2, $3, 'won', '{}', 'game', '{seeded}', 3, 3, 1, now())`,
+      [userId, campaignId, stage],
+    );
+  }
+}

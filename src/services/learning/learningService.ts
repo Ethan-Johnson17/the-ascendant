@@ -9,6 +9,8 @@ import { planAttempt, planLessonCompletion, resolveSubmission, type CompetencyCo
 import type { WeaknessState } from '../../engine/learning/weakness.ts';
 import type { Examiner, ExaminerMarking } from '../ai/examinerService.ts';
 import { listQuests } from '../quests/questService.ts';
+import { createBossService, type BossPlanner } from '../bosses/bossService.ts';
+import { bossGateOpen } from '../../engine/encounters/boss.ts';
 
 /**
  * The server side of learning: what the `learning` Edge Function runs for each request.
@@ -38,6 +40,10 @@ export const learningRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('submit_check'), attemptId: z.uuid(), answers: z.record(z.string().max(200), answerSchema) }),
   z.object({ action: z.literal('complete_lesson'), campaignId: z.uuid(), activityId: z.string().min(1).max(200) }),
   z.object({ action: z.literal('list_quests'), campaignId: z.uuid() }),
+  z.object({ action: z.literal('list_bosses'), campaignId: z.uuid() }),
+  z.object({ action: z.literal('start_boss'), campaignId: z.uuid(), stage: z.number().int().min(2).max(4) }),
+  z.object({ action: z.literal('view_boss'), encounterId: z.uuid() }),
+  z.object({ action: z.literal('answer_boss'), encounterId: z.uuid(), position: z.number().int().min(0).max(20), answer: answerSchema.nullable() }),
 ]);
 export type LearningRequest = z.infer<typeof learningRequestSchema>;
 
@@ -168,6 +174,8 @@ export interface LearningServiceOptions {
   readonly maxAttemptsPerHour?: number;
   /** Marks written answers. Without it, written questions are left out (or their check waits). */
   readonly examiner?: Examiner | null;
+  /** Proposes boss plans (the Strategist). Without it, the game makes its own plan. */
+  readonly bossPlanner?: BossPlanner | null;
 }
 
 export function createLearningService(store: LearningStore, options: LearningServiceOptions = {}) {
@@ -175,11 +183,19 @@ export function createLearningService(store: LearningStore, options: LearningSer
   const now = options.now ?? (() => new Date());
   const maxPerHour = options.maxAttemptsPerHour ?? 30;
   const examiner = options.examiner ?? null;
+  const bosses = createBossService(store, { now, planner: options.bossPlanner ?? null });
 
   async function startCheck(userId: string, campaignId: string, activityId: string): Promise<LearningResponse> {
     const raw = await store.call('learning_start_context', { p_user_id: userId, p_campaign_id: campaignId, p_activity_id: activityId });
     if (raw === null) return { status: 404, body: { error: 'That check was not found in this campaign.' } };
     const ctx = startContextSchema.parse(raw);
+    // Checks above Apprentice open only once the boss of the stage below is beaten.
+    if (ctx.activity.targetStage > 2) {
+      const gate = z.object({ wonStages: z.array(z.number().int()), passedBefore: z.boolean() })
+        .parse(await store.call('boss_check_gate', { p_user_id: userId, p_campaign_id: campaignId, p_activity_id: activityId }));
+      // A check already passed can always be taken again (reviews); earned stages are never taken away.
+      if (!gate.passedBefore && !bossGateOpen(ctx.activity.targetStage, new Set(gate.wonStages))) return { status: 403, body: { error: 'Beat the boss of the stage below before taking this check.', code: 'boss_gate' } };
+    }
     if (ctx.recentAttempts >= maxPerHour) return { status: 429, body: { error: 'You have started a lot of checks this hour. Take a short break and try again.' } };
 
     const writtenAvailable = ctx.activity.writtenCount > 0 && examiner !== null && (await examiner.available(userId, ctx.activity.writtenCount));
@@ -368,6 +384,14 @@ export function createLearningService(store: LearningStore, options: LearningSer
           const listed = await listQuests(store, userId, req.data.campaignId);
           return listed ? { status: 200, body: listed } : { status: 404, body: { error: 'That campaign was not found.' } };
         }
+        case 'list_bosses':
+          return await bosses.list(userId, req.data.campaignId);
+        case 'start_boss':
+          return await bosses.start(userId, req.data.campaignId, req.data.stage);
+        case 'view_boss':
+          return await bosses.view(userId, req.data.encounterId);
+        case 'answer_boss':
+          return await bosses.answer(userId, req.data.encounterId, req.data.position, req.data.answer);
       }
     } catch (err) {
       if (err instanceof StoreError) {
