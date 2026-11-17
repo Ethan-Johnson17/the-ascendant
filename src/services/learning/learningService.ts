@@ -8,6 +8,7 @@ import { retentionStrength } from '../../engine/learning/retention.ts';
 import { planAttempt, planLessonCompletion, resolveSubmission, type CompetencyContext } from '../../engine/learning/session.ts';
 import type { WeaknessState } from '../../engine/learning/weakness.ts';
 import type { Examiner, ExaminerMarking } from '../ai/examinerService.ts';
+import { listQuests } from '../quests/questService.ts';
 
 /**
  * The server side of learning: what the `learning` Edge Function runs for each request.
@@ -36,6 +37,7 @@ export const learningRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('start_check'), campaignId: z.uuid(), activityId: z.string().min(1).max(200) }),
   z.object({ action: z.literal('submit_check'), attemptId: z.uuid(), answers: z.record(z.string().max(200), answerSchema) }),
   z.object({ action: z.literal('complete_lesson'), campaignId: z.uuid(), activityId: z.string().min(1).max(200) }),
+  z.object({ action: z.literal('list_quests'), campaignId: z.uuid() }),
 ]);
 export type LearningRequest = z.infer<typeof learningRequestSchema>;
 
@@ -362,6 +364,10 @@ export function createLearningService(store: LearningStore, options: LearningSer
           return await submitCheck(userId, req.data.attemptId, req.data.answers);
         case 'complete_lesson':
           return await completeLesson(userId, req.data.campaignId, req.data.activityId);
+        case 'list_quests': {
+          const listed = await listQuests(store, userId, req.data.campaignId);
+          return listed ? { status: 200, body: listed } : { status: 404, body: { error: 'That campaign was not found.' } };
+        }
       }
     } catch (err) {
       if (err instanceof StoreError) {

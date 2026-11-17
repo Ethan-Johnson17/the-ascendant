@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BookOpen, Check, ChevronRight, ClipboardCheck, Clock, Library, Lock, RotateCcw, Target } from 'lucide-react';
+import { BookOpen, Check, ChevronRight, ClipboardCheck, Clock, Library, Lock, RotateCcw, ScrollText, Target } from 'lucide-react';
 import { useAuth } from '../app/AuthProvider.tsx';
 import { useGame } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
@@ -13,6 +13,7 @@ import { LearningGate, SampleNote, StagePips } from '../features/learning/Learni
 import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
 import { useCourses } from '../features/subjects/CoursesProvider.tsx';
 import { GeneratedLabels, SubjectPlanPanel } from '../features/subjects/SubjectPanels.tsx';
+import { QuestSummaryPanel } from '../features/quests/QuestSummaryPanel.tsx';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
 import { masteryStages } from '../engine/character/attributeGrowth.ts';
 import type { DifficultyPreference } from '../engine/learning/config.ts';
@@ -45,6 +46,7 @@ export default function CampaignPage() {
             subtitle={`${data.counts.lessonsDone} of ${data.counts.lessons} lessons read · ${data.counts.checksPassed} of ${data.counts.checks} checks passed`}
             actions={
               <>
+                <ButtonLink to={`/campaigns/${campaign!.id}/quests`} variant="secondary" icon={<ScrollText className="size-4" aria-hidden />}>Quests</ButtonLink>
                 <ButtonLink to={`/codex?campaign=${campaign!.id}`} variant="secondary" icon={<Library className="size-4" aria-hidden />}>Codex</ButtonLink>
                 <ButtonLink to={`/weaknesses?campaign=${campaign!.id}`} variant="secondary" icon={<Target className="size-4" aria-hidden />}>
                   Weakness Bank{data.weaknesses.filter((w) => w.status === 'open').length ? ` (${data.weaknesses.filter((w) => w.status === 'open').length})` : ''}
@@ -84,6 +86,7 @@ export default function CampaignPage() {
                   onBuilt={reload}
                 />
               )}
+              {!isSample && <QuestSummaryPanel campaignId={campaign!.id} />}
               <Panel eyebrow="Campaign progress" title="Level">
                 <LevelProgress totalXp={campaign!.campaignXp} curve={defaultProgressionConfig.campaignLevels} label="Campaign" compact />
               </Panel>

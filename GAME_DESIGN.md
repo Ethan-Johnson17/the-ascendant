@@ -482,6 +482,14 @@ The AI must not independently award victories or alter character statistics.
   course itself (for example "study these lessons and pass their check", "clear weak spots in the
   Weakness Bank"), with fixed objectives, success conditions and XP. The Game Master narrates it.
   Quests work for every subject, and without AI.
+- **Quest templates (built 2026-11-17):** a *learning quest* per curriculum goal (study its lessons,
+  pass its Apprentice check); a *mastery quest* per goal and harder stage (pass its Competent or
+  Proficient checks; opens when the skills reach the stage below); *boss preparation* (every skill the
+  course can test at Apprentice, then Competent, then Proficient; one at a time); *review quests*
+  (clear 1, 3, 6, 10 weak spots) and *retention quests* (pass 1, 3, 6, 10 spaced reviews). Every
+  quest is worth 40 XP (configurable), paid once. A quest completes automatically when the game
+  sees every step done in the player's records; work done before quests existed counts. The Game
+  Master's story is told once per quest, on request, and saved.
 - **A boss at each stage (revised 2026-11-16; replaces "one boss per course").** Bosses are the gates
   between stages. When every skill a course's boss tests has reached **Apprentice**, the Apprentice
   boss opens; beating it unlocks the course's **Competent** checks. The Competent boss (every skill at

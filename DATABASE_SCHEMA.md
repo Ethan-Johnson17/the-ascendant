@@ -36,6 +36,21 @@ character/campaign totals only if the row was new; refuses another player's camp
 Differences from the proposal below: attributes are six named columns rather than abbreviations;
 `level` and `campaign_level` are computed by the engine from XP instead of stored; sub-skills added.
 
+## Implemented in Phase 5 Part A (quests)
+
+Migration `supabase/migrations/20261117000100_quests.sql` (tested offline; applied live). Quests
+themselves are built by the engine from the course, so only these are stored:
+- `quest_completions` (campaign, quest key, completed at, a snapshot of the title and steps). One
+  row per quest per campaign (primary key), so a quest completes once.
+- `quest_stories` (campaign, quest key, the checked Game Master scene, `ai`/`fixture`). One per quest.
+- Both: players read their own rows; no player writes.
+- `quest_context` (service role): the course in curriculum order (no answer keys) and the player's
+  records: completed lessons, passed counted checks, weak spots open and cleared, reviews passed,
+  stages, completed quests and stories.
+- `learning_record_quests` (service role): records completed quests, refusing XP that isn't
+  `quest_completed` for that exact quest; XP goes through `apply_xp_award`, so it is paid once.
+- `ai_save_quest_story` (service role): saves a story once.
+
 ## Implemented in Phase 4 Milestone C part 3
 
 Migration `supabase/migrations/20261116000600_game_master_strategist.sql` (tested offline; applied

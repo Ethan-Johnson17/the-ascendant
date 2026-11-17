@@ -155,6 +155,13 @@ rewards, winning or losing, "the answer is"), lines from unknown characters and 
 no narration is left, or an offered action has no label, nothing is shown. Choices always appear in
 the game's order. The Game Master changes nothing and nothing is saved.
 
+### Quest stories (Phase 5 Part A)
+Action `narrate_quest`. On the Quests screen, "Hear the Guide's story" asks the Game Master to
+introduce one quest. The scene is built from the engine's quest (title, summary, steps) with two
+actions, "begin" (opens the first unfinished step) and "later". The reply goes through the same
+`checkScene` checks, is saved in `quest_stories`, and is returned from there afterwards, so each
+quest's story costs one request once. Locked quests have no story. The story never changes a quest.
+
 ### Strategist (Milestone C part 3; no screen until Phase 5)
 Action `plan_boss`. Decided 2026-11-16: a boss uses only the course's existing, already-checked
 questions. The engine (`src/engine/encounters/bossPlan.ts`) owns the rules:

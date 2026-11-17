@@ -2,7 +2,7 @@
 
 An educational RPG in which **your real-world knowledge is the source of your character's power.**
 
-Current stage: **Phase 4, AI integration, complete** (Tutor, Examiner, Progression Advisor, Researcher, "Start a new subject" with the Course Builder, and the Game Master and Strategist formats for Phase 5). See `ROADMAP.md` for status.
+Current stage: **Phase 5, quests and bosses** (Part A, quests, done). **Phase 4, AI integration, complete** (Tutor, Examiner, Progression Advisor, Researcher, "Start a new subject" with the Course Builder, and the Game Master and Strategist formats for Phase 5). See `ROADMAP.md` for status.
 
 ## Running it on your computer (first time)
 

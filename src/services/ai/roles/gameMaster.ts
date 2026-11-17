@@ -135,6 +135,19 @@ export function previewScene(): Scene {
   };
 }
 
+/** A quest's opening scene: the game's own quest, told by the course's guide. */
+export function questScene(quest: { title: string; summary: string; objectives: readonly { label: string }[] }): Scene {
+  return {
+    title: `Quest: ${quest.title}`,
+    goal: `Introduce this quest and why it matters to the hero's journey. ${quest.summary} Its steps: ${quest.objectives.map((o) => o.label).join('; ')}. Do not change, add or skip steps.`,
+    npcs: [{ id: 'guide', name: 'The Guide', role: 'a calm, wise mentor who gives the hero quests' }],
+    actions: [
+      { id: 'begin', meaning: 'set out on this quest now' },
+      { id: 'later', meaning: 'come back to it later' },
+    ],
+  };
+}
+
 /** Deterministic stand-in for development and tests, labelled as a fixture. */
 export function fixtureScene(scene: Scene): GameMasterReply {
   return {

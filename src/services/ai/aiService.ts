@@ -13,7 +13,8 @@ import { verifySource } from '../research/verify.ts';
 import { courseRequestSchema } from './roles/courseBuilder.ts';
 import { createSubjectService } from '../subjects/subjectService.ts';
 import { createWikipedia } from '../subjects/wikipedia.ts';
-import { buildGameMasterMessages, checkScene, gameMasterReplySchema, previewScene, sceneContextSchema } from './roles/gameMaster.ts';
+import { buildGameMasterMessages, checkScene, gameMasterReplySchema, previewScene, questScene, sceneContextSchema } from './roles/gameMaster.ts';
+import { loadQuests } from '../quests/questService.ts';
 import { bossContextSchema, buildStrategistMessages, checkStrategy, strategistReplySchema, toBank } from './roles/strategist.ts';
 import { bossReadiness, focusBank } from '../../engine/encounters/bossPlan.ts';
 import type { AiRole } from './types.ts';
@@ -65,6 +66,7 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
       .default([]),
   }),
   z.object({ action: z.literal('plan_boss'), campaignId: z.uuid() }),
+  z.object({ action: z.literal('narrate_quest'), campaignId: z.uuid(), questKey: z.string().regex(/^[a-z0-9-]{1,150}$/) }),
   z.object({ action: z.literal('usage') }),
 ]);
 
@@ -394,6 +396,36 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
   }
 
   /**
+   * The Game Master tells a quest's story once; it is saved, so reading it again costs nothing. The
+   * quest itself (steps, XP, completion) is the engine's and is not changed by the story.
+   */
+  async function narrateQuest(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'narrate_quest' }>): Promise<AiResponse> {
+    const loaded = await loadQuests(store, userId, req.campaignId);
+    if (!loaded) return { status: 404, body: { error: 'That campaign was not found.' } };
+    const quest = loaded.quests.find((q) => q.key === req.questKey);
+    if (!quest) return { status: 404, body: { error: 'That quest was not found.' } };
+    const saved = loaded.ctx.stories.find((s) => s.questKey === quest.key);
+    if (saved) return { status: 200, body: { story: { ...saved.story, origin: saved.origin }, saved: true } };
+    if (quest.status === 'locked') return { status: 409, body: { error: 'That quest isn’t open yet.', code: 'locked' } };
+    const raw = await store.call('ai_scene_context', { p_user_id: userId, p_campaign_id: req.campaignId });
+    if (raw === null) return { status: 404, body: { error: 'That campaign was not found.' } };
+    const scene = questScene(quest);
+    const res = await runChecked(
+      userId, req.campaignId, 'game_master', 'Game Master',
+      { schemaName: 'game_master_scene', messages: buildGameMasterMessages(sceneContextSchema.parse(raw), scene, null, []), temperature: 0.8, fixtureHint: { scene } },
+      gameMasterReplySchema,
+      (data) => {
+        const checked = checkScene(data, scene);
+        return checked ? { body: { scene: checked } } : { reason: 'scene: no_narration_or_missing_choice' };
+      },
+    );
+    if (res.status !== 200) return res;
+    const { scene: story, origin, usage: used } = res.body as { scene: object; origin: 'ai' | 'fixture'; usage: unknown };
+    await store.call('ai_save_quest_story', { p_user_id: userId, p_campaign_id: req.campaignId, p_quest_key: quest.key, p_story: story, p_origin: origin });
+    return { status: 200, body: { story: { ...story, origin }, saved: false, usage: used } };
+  }
+
+  /**
    * The Strategist proposes a boss from the course's checked questions; the engine decides whether
    * the plan is allowed. Nothing is saved (bosses arrive in Phase 5). The reply carries question
    * ids only, never options or answers.
@@ -439,6 +471,7 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       if (req.data.action === 'build_lesson') return await subjects.build(userId, req.data.templateId);
       if (req.data.action === 'narrate_scene') return await narrateScene(userId, req.data);
       if (req.data.action === 'plan_boss') return await planBoss(userId, req.data);
+      if (req.data.action === 'narrate_quest') return await narrateQuest(userId, req.data);
       return await askTutor(userId, req.data);
     } catch (err) {
       if (err instanceof z.ZodError) return { status: 500, body: { error: 'The game data came back in an unexpected shape. Please try again later.' } };

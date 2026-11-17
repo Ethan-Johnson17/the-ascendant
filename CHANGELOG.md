@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 5 Part A
+- Quests: every course now has learning, mastery, boss-preparation, review and retention quests,
+  built from its own lessons and checks. They complete on their own as you learn (+40 XP each, once).
+  Work you'd already done counts.
+- "Hear the Guide's story": the Game Master (AI) introduces a quest once; its choices take you to the
+  next step.
+- A Quests page for each campaign, and a quest panel on the campaign page.
+
 ## Unreleased — Phase 4 Milestone C part 3
 - Behind the scenes, ready for quests and bosses (Phase 5): the Game Master (AI) narrates scenes
   using only the game's characters and choices, and the Strategist (AI) designs bosses from your

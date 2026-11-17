@@ -1,5 +1,34 @@
 # Development Log
 
+## 2026-11-17 — Phase 5 Part A: quests
+
+**Product owner decisions (2026-11-16):** quests from game templates with AI story; a boss at each
+stage (Apprentice, Competent, Proficient), each unlocking the next stage's checks (revised after the
+product owner asked how players progress past Apprentice); Resolve points; retry after a recovery
+quest. Recorded in GAME_DESIGN.md.
+
+**Built:**
+- engine: `src/engine/quests/quests.ts` (five templates, progress, completion plans);
+- server: `src/services/quests/questService.ts`; `list_quests` in the learning function;
+  `narrate_quest` in the ai function;
+- database: migration `20261117000100_quests.sql`;
+- screens: Quests page (`/campaigns/:id/quests`), quest card with story, quest panel on the campaign page.
+
+**Choices:**
+- *Quests are computed, not stored.* The engine rebuilds them from the course and the records every
+  time, so they always match the course (including AI courses as lessons are built). Only completions
+  and stories are stored.
+- *Completion is automatic and server-side.* Listing quests records any the engine finds complete;
+  there is no "claim" button to press, and the player can't mark steps done.
+- *Earlier work counts.* A player who already did the work gets the quest on first view. XP is still
+  paid once per quest.
+- *Stories on request, saved.* Opening the Quests screen never spends AI requests.
+
+**Known limitations:** preparation gates count only skills that currently have checks, so an AI
+course with only some lessons built could complete "Every skill at Apprentice" early (Part B's boss
+rules must count the planned course, not just built lessons); every quest is worth the same XP;
+"Go" on a preparation step opens the campaign page rather than a specific check.
+
 ## 2026-11-16 — Phase 4 Milestone C part 3: Game Master and Strategist formats
 
 **Product owner decisions:** groundwork only (nothing new on screen until Phase 5); bosses use only
