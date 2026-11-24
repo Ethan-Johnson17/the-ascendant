@@ -143,6 +143,11 @@ const assessment = z.object({
   questionCount: z.number().int().min(1).max(20),
   /** How many of the issued questions are written (marked by the Examiner). */
   writtenCount: z.number().int().min(0).max(5).default(0),
+  /**
+   * A practical project (GAME_DESIGN.md "Practical projects"): one written task for a topic, proving
+   * Advanced. A passed project counts once per competency and pays the project reward once.
+   */
+  project: z.boolean().default(false),
   items: z.array(assessmentItemSchema).min(1).max(60),
 });
 
@@ -325,6 +330,9 @@ export function validateCurriculum(input: unknown, templateCompetencies?: readon
       if (activity.writtenCount > activity.questionCount) issues.push(`${where} issues more written questions than questions`);
       if (writtenPool < activity.writtenCount) issues.push(`${where} issues ${activity.writtenCount} written questions but has only ${writtenPool}`);
       if (activity.writtenCount === 0 && writtenPool > 0) issues.push(`${where} has written questions but never issues them (writtenCount is 0)`);
+      if (activity.project && (activity.targetStage !== 5 || activity.questionCount !== 1 || activity.writtenCount !== 1 || activity.items.length !== 1)) {
+        issues.push(`${where} is a project, so it must be one written task for Advanced`);
+      }
       if (activity.targetStage === 5) {
         // Advanced is earned with applied work only.
         if (activity.writtenCount !== activity.questionCount || otherPool > 0) issues.push(`${where} targets Advanced, so every question must be written`);

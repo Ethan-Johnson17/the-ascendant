@@ -70,6 +70,7 @@ const competencyRow = z.object({
   passTimesForNext: z.array(date),
   recentResults: z.array(z.boolean()),
   openWeaknesses: z.number().int(),
+  projectPassed: z.boolean().default(false),
 });
 
 const itemRow = z.object({ id: z.string(), conceptId: z.string(), definition: z.record(z.string(), z.unknown()) });
@@ -100,7 +101,7 @@ const startContextSchema = z.object({
 const submitContextSchema = z.object({
   campaignId: z.string(),
   attempt: z.object({ id: z.string(), submitted: z.boolean(), difficulty: z.number().int().min(1).max(3) }),
-  activity: z.object({ id: z.string(), targetStage: z.number().int(), competencyIds: z.array(z.string()) }),
+  activity: z.object({ id: z.string(), targetStage: z.number().int(), competencyIds: z.array(z.string()), isProject: z.boolean().default(false) }),
   items: z.array(itemRow),
   competencies: z.array(competencyRow),
   weaknesses: z.array(weaknessRow),
@@ -124,6 +125,7 @@ function toCompetency(row: z.infer<typeof competencyRow>): CompetencyContext {
     recentResults: row.recentResults,
     openWeaknesses: row.openWeaknesses,
     lastDifficulty: row.lastDifficulty as Difficulty | null,
+    projectPassed: row.projectPassed,
   };
 }
 

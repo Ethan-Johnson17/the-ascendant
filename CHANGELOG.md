@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 5 Part C2
+- Practical projects: one written task at the end of each topic, marked by the Examiner. Pass it
+  for 75 XP (once). It counts as one of the two passes you need for Advanced; the other comes from
+  an Advanced check.
+- Projects open when every skill they cover is Proficient (after the Proficient boss).
+- Mesopotamia has three: founding a village, a museum panel, and "help or hindrance?".
+- Courses you made with AI get one project for the whole course, written by the AI once when you're
+  ready for it (1 AI request).
+
 ## Unreleased — Phase 5 Part C1
 - "Go deeper" for courses you made with AI: under each lesson, the game can write a harder check
   from the same lesson: Competent, then Proficient, then Advanced (written answers only).

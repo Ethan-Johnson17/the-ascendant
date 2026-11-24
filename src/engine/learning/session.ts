@@ -27,6 +27,8 @@ export interface CompetencyContext {
   readonly recentResults: readonly boolean[];
   readonly openWeaknesses: number;
   readonly lastDifficulty: Difficulty | null;
+  /** A practical project has already counted for this competency (it counts only once). */
+  readonly projectPassed?: boolean;
 }
 
 export type Refusal = {
@@ -91,7 +93,7 @@ export function planAttempt(ctx: StartContext, seed: string, config: LearningCon
 export interface SubmitContext {
   readonly campaignId: string;
   readonly attempt: { readonly id: string; readonly submitted: boolean; readonly difficulty: Difficulty };
-  readonly activity: { readonly id: string; readonly targetStage: number };
+  readonly activity: { readonly id: string; readonly targetStage: number; readonly isProject?: boolean };
   /** The questions issued for this attempt, with answer keys. */
   readonly items: readonly AssessmentItem[];
   readonly competencies: readonly CompetencyContext[];
@@ -164,7 +166,8 @@ export function resolveSubmission(
   const competencies: CompetencyOutcome[] = ctx.competencies.map((c) => {
     const evidence = grade.passed && checkUnlocked(c.stage, ctx.activity.targetStage);
     // Only a pass of the next stage's check moves the stage; easier checks still count for retention.
-    const countsForNext = evidence && ctx.activity.targetStage === c.stage + 1;
+    // A practical project counts as one pass, once per competency; the other must come from a check.
+    const countsForNext = evidence && ctx.activity.targetStage === c.stage + 1 && !(ctx.activity.isProject && c.projectPassed);
     const mastery = decideMastery(c.stage, countsForNext ? [...c.passTimesForNext, now] : c.passTimesForNext, config, cap);
     const retention = applyRetentionResult(c.retention, grade.passed, now, config);
     return { competencyId: c.competencyId, previousStage: c.stage, mastery, retention: retention.state, evidence, reviewedWhileDue: retention.wasDueReview };
@@ -185,8 +188,9 @@ export function resolveSubmission(
   const attributes = deriveAttributes(ctx.standings.map((s) => ({ attribute: s.attribute, masteryStage: stageById.get(s.competencyId) ?? s.stage })));
 
   const xp: XpAwardPlan[] = [];
-  if (grade.passed) xp.push(planXpAward({ kind: 'knowledge_check_passed', sourceId: ctx.activity.id, campaignId: ctx.campaignId }));
-  for (const c of ctx.competencies) {
+  if (grade.passed) xp.push(planXpAward({ kind: ctx.activity.isProject ? 'practical_project_completed' : 'knowledge_check_passed', sourceId: ctx.activity.id, campaignId: ctx.campaignId }));
+  // Projects are not retention reviews: they pay the project reward only.
+  for (const c of ctx.activity.isProject ? [] : ctx.competencies) {
     const outcome = competencies.find((o) => o.competencyId === c.competencyId);
     if (grade.passed && outcome?.reviewedWhileDue && c.retention.nextReviewAt) {
       // One reward per scheduled review: the review is identified by when it fell due.

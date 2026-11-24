@@ -21,6 +21,7 @@ export interface AiConfig {
     readonly outlineTokens: number;
     readonly lessonTokens: number;
     readonly checkTokens: number;
+    readonly projectTokens: number;
   };
   /** The Game Master's scenes (groundwork for quests in Phase 5). */
   readonly gameMaster: { readonly maxMessageChars: number; readonly maxHistoryTurns: number };
@@ -41,7 +42,7 @@ export const defaultAiConfig: AiConfig = {
   maxOutputTokens: { tutor: 2000, examiner: 1500, progression_advisor: 1200, researcher: 1500, game_master: 1500, strategist: 2500 },
   researchCooldownDays: 7,
   // Groq's free plan allows 8,000 tokens a minute in total, so a lesson request stays well under it.
-  courseBuilder: { maxOpenSubjects: 3, articleChars: 9000, outlineTokens: 2500, lessonTokens: 3500, checkTokens: 2500 },
+  courseBuilder: { maxOpenSubjects: 3, articleChars: 9000, outlineTokens: 2500, lessonTokens: 3500, checkTokens: 2500, projectTokens: 2000 },
   gameMaster: { maxMessageChars: 300, maxHistoryTurns: 2 },
   tutor: { maxQuestionChars: 500, maxHistoryTurns: 3, maxHistoryChars: 1500 },
 };

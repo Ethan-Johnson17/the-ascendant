@@ -1,5 +1,30 @@
 # Development Log
 
+## 2026-11-23 — Phase 5 Part C2: practical projects
+
+**Product owner decisions (2026-11-23):** a passed project counts as one of the two Advanced passes
+(the other from an Advanced check); it opens at Proficient; for AI-made courses the AI writes it once.
+
+**Built:**
+- engine: `project` flag on checks, validated (one written task proving Advanced); a project
+  counts once per competency and pays `practical_project_completed`, never review XP
+  (`src/engine/learning/session.ts`); readiness for AI courses (`src/engine/learning/projects.ts`);
+- content: three Mesopotamia projects (content release v3);
+- AI: the Course Builder's project prompt, schema and labelled fixture; `writeProject` in
+  `src/services/subjects/subjectService.ts`; action `write_project`; `aiClient.writeProject`;
+- database: migration `20261123000100_practical_projects.sql`;
+- screens: projects in the curriculum and on the check page; a "Practical project" line in the
+  course plan of AI-made courses.
+
+**Choices (mine, within the design):**
+- *A project is a kind of check.* It reuses issuing, Examiner marking, "doesn't count", the Weakness
+  Bank and the boss gates instead of a second system.
+- *"Counts once" is per competency, across projects:* the second Advanced pass must be a check.
+- *One project per AI course,* covering every skill its lessons teach (AI courses have one topic).
+- *Mesopotamia projects use only facts its lessons already teach and cite.* Marked for your review.
+
+**Known limitations:** no project has been passed live yet (the test account isn't Proficient).
+
 ## 2026-11-17 — Phase 5 Part C1: "go deeper" for AI-made courses
 
 **Product owner decisions (2026-11-17):** Part C order is go deeper, then practical projects, then

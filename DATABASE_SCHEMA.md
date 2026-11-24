@@ -109,6 +109,15 @@ Migration `supabase/migrations/20261116000500_generated_subjects.sql` (tested of
 - Service-role functions: `ai_subject_slots`, `ai_create_subject` (locks per player, enforces the
   open-subject limit, checks shape and ids), `ai_course_context`, `ai_save_lesson` (lessons in order;
   records the article revision).
+- Practical projects (Phase 5 C2, migration `20261123000100_practical_projects.sql`):
+  `learning_activities.is_project` (a project must be a stage-5 check with one written question).
+  `learning_competency_state` counts at most one project pass per competency and reports
+  `projectPassed`; `learning_submit_context` reports `isProject`; `learning_record_submission`
+  refuses a stage rise with no non-project pass, any XP for a project other than
+  `practical_project_completed` for that project, and that reward for anything else. Service-role
+  `ai_project_context` and `ai_save_project` (once per course, only when every lesson is built and
+  every skill the lessons teach is Proficient; ids and shape checked). The Mesopotamia projects are
+  content release v3 (`20261123000200_history_pilot_curriculum_v3.sql`, generated).
 - "Go deeper" (Phase 5 C1, migration `20261117000400_go_deeper.sql`): service-role functions
   `ai_deepen_context` (a built lesson's text, Codex concepts, check stages and the player's skill
   stage) and `ai_save_deeper_check`. The save refuses: a stage that isn't the next one, a stage

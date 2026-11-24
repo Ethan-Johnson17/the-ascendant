@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BookOpen, Check, ChevronRight, ClipboardCheck, Clock, Library, Lock, RotateCcw, ScrollText, Target } from 'lucide-react';
+import { BookOpen, Check, ChevronRight, ClipboardCheck, Clock, Hammer, Library, Lock, RotateCcw, ScrollText, Target } from 'lucide-react';
 import { useAuth } from '../app/AuthProvider.tsx';
 import { useGame } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
@@ -85,6 +85,8 @@ export default function CampaignPage() {
                   course={template}
                   campaignActive={campaign!.status === 'active'}
                   completedLessonIds={new Set([...data.activities.values()].filter((a) => a.kind === 'lesson' && a.completed).map((a) => a.id))}
+                  hasProject={[...data.activities.values()].some((a) => a.kind === 'assessment' && a.isProject)}
+                  lessonSkills={data.competencies.filter((c) => [...data.activities.values()].some((a) => a.kind === 'lesson' && a.competencyIds.includes(c.id)))}
                   onBuilt={reload}
                 />
               )}
@@ -150,7 +152,7 @@ function ActivityRow({ activity: a, campaignId }: { activity: ActivityView; camp
   const body = (
     <div className={cn('flex min-h-14 items-center gap-3 rounded-control border px-3 py-2.5 transition-colors', locked ? 'border-iron/60 bg-obsidian/40 text-smoke' : 'border-iron bg-charcoal/60 hover:border-gold-600')}>
       <span className={cn('grid size-9 shrink-0 place-items-center rounded-full border', a.kind === 'lesson' && a.completed ? 'border-vital/60 text-vital' : 'border-gold-600 text-gold-300', locked && 'border-iron text-smoke')}>
-        {locked ? <Lock className="size-4" aria-hidden /> : a.kind === 'lesson' ? (a.completed ? <Check className="size-4" aria-hidden /> : <BookOpen className="size-4" aria-hidden />) : <ClipboardCheck className="size-4" aria-hidden />}
+        {locked ? <Lock className="size-4" aria-hidden /> : a.kind === 'lesson' ? (a.completed ? <Check className="size-4" aria-hidden /> : <BookOpen className="size-4" aria-hidden />) : a.isProject ? <Hammer className="size-4" aria-hidden /> : <ClipboardCheck className="size-4" aria-hidden />}
       </span>
       <div className="min-w-0 flex-1">
         <p className={cn('truncate font-medium', locked ? 'text-smoke' : 'text-ink')}>{a.title}</p>
@@ -161,7 +163,9 @@ function ActivityRow({ activity: a, campaignId }: { activity: ActivityView; camp
               ? a.bossLocked
                 ? `Locked: beat the ${masteryStages[a.targetStage - 2] ?? 'previous'} boss first`
                 : `Locked: reach ${masteryStages[a.targetStage - 2] ?? 'the previous stage'} first`
-              : `${a.questionCount} questions · proves ${a.targetStageName}${a.passes ? ` · passed ${a.passes}×, best ${Math.round((a.bestScore ?? 0) * 100)}%` : ''}`}
+              : a.isProject
+                ? `Practical project · written task · proves ${a.targetStageName} · ${defaultProgressionConfig.baseXp.practical_project_completed} XP${a.passes ? ' · passed' : ''}`
+                : `${a.questionCount} questions · proves ${a.targetStageName}${a.passes ? ` · passed ${a.passes}×, best ${Math.round((a.bestScore ?? 0) * 100)}%` : ''}`}
         </p>
       </div>
       {a.kind === 'assessment' && a.reviewDue && a.unlocked && <Badge tone="warning"><RotateCcw className="size-3" aria-hidden />Review</Badge>}

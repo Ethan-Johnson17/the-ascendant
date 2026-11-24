@@ -520,6 +520,22 @@ The AI must not independently award victories or alter character statistics.
     it counts as evidence for Advanced and gives a one-time XP reward.
   - C3 free talk with characters (the Game Master): story only. It never gives XP or changes
     progress; each message uses 1 daily AI request; characters may point to lessons and quests.
+- **Practical projects (decided 2026-11-23):** a passed project counts as **one** of the two passes
+  needed for Advanced, once per skill; the other pass must come from an Advanced check. A project
+  opens when every skill it covers is **Proficient**. For AI-made courses the Course Builder (AI)
+  writes the project **once**, when every lesson is built and every skill is Proficient (1 request).
+- **How C2 works (built 2026-11-23):**
+  - A project is one written task (up to 2,000 characters) at the end of a topic: advising someone,
+    a museum panel, an argued answer. The Examiner marks it against a rubric; the game adds up the
+    points. If the Examiner isn't sure, the attempt doesn't count, like any written answer.
+  - The first pass pays **75 XP** (the configured "practical project" reward), once. Passing again
+    pays nothing and doesn't count again toward Advanced.
+  - It uses the same gate as Advanced checks (the Proficient boss beaten) and sends mistakes to the
+    Weakness Bank. Projects are not retention reviews.
+  - Mesopotamia has three, written by the development team from the course's sources: founding a
+    village on the plain (Geography), a museum panel from fields to the first city (Agriculture),
+    and "help or hindrance?", an argued answer (both). *For product-owner review.*
+  - An AI-made course gets one project for the whole course, covering every skill its lessons teach.
 - **How C1 "go deeper" works (built 2026-11-17):**
   - Under each built lesson of an AI-made course, the campaign page offers the lesson's next harder
     check, one stage at a time: **Competent** (for lessons 1–2, whose first check is Apprentice),
