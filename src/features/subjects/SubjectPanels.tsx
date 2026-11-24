@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react';
-import { Check, ExternalLink, Flag, FlaskConical, Hammer, Lock, Sparkles, TriangleAlert, XCircle } from 'lucide-react';
+import { Check, ExternalLink, Flag, FlaskConical, Hammer, Layers, Lock, Sparkles, TriangleAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../../app/AuthProvider.tsx';
 import { useGame } from '../../app/GameProvider.tsx';
 import { Panel } from '../../components/ui/Panel.tsx';
@@ -9,6 +9,9 @@ import { Notice } from '../../components/ui/Notice.tsx';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.tsx';
 import { createAiClient } from '../../services/ai/aiClient.ts';
 import { cn } from '../../utils/cn.ts';
+import { deeperStatus } from '../../engine/learning/deeper.ts';
+import { masteryStages } from '../../engine/character/attributeGrowth.ts';
+import type { CompetencyView, ObjectiveView } from '../../services/learning/learningData.ts';
 import { adviceNote, useCourses, type CourseInfo } from './CoursesProvider.tsx';
 
 /** The labels every AI-made course and lesson carries (GAME_DESIGN.md "AI-made subjects"). */
@@ -184,6 +187,60 @@ export function ReportMistake({ activityId }: { activityId: string }) {
           {error && <p className="text-sm text-warning" role="alert">{error}</p>}
         </form>
       )}
+    </div>
+  );
+}
+
+/**
+ * "Go deeper" under a lesson of an AI-made course: writes the lesson's next harder check (1 AI
+ * request), from the lesson's own text. Offered only when the player could take that check now;
+ * otherwise it says what to reach first, so no request is spent on a check that can't be used.
+ */
+export function GoDeeper({ course, objective, competencies, campaignActive, onBuilt }: {
+  course: CourseInfo; objective: ObjectiveView; competencies: readonly CompetencyView[]; campaignActive: boolean; onBuilt: () => Promise<void>;
+}) {
+  const { client } = useAuth();
+  const api = useMemo(() => (client ? createAiClient(client) : null), [client]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: 'info' | 'warning'; text: string } | null>(null);
+  const lesson = objective.activities.find((a) => a.kind === 'lesson');
+  if (!lesson || course.generated?.closed || !campaignActive) return null;
+  const skill = competencies.find((c) => c.id === lesson.competencyIds[0]);
+  const status = deeperStatus(objective.activities.filter((a) => a.kind === 'assessment').map((a) => a.targetStage), skill?.stage ?? 1);
+  const stageName = (s: number) => masteryStages[s - 1] ?? 'the next stage';
+
+  const deepen = async () => {
+    if (!api || busy) return;
+    setBusy(true);
+    setMessage(null);
+    const r = await api.deepenLesson(course.id, lesson.key);
+    if (r.ok) {
+      await onBuilt();
+      const dropped = r.data.droppedQuestions;
+      setMessage({ tone: 'info', text: `${stageName(r.data.stage)} check ready.${dropped ? ` ${dropped} question${dropped === 1 ? '' : 's'} that couldn’t be backed up by the lesson ${dropped === 1 ? 'was' : 'were'} left out.` : ''}` });
+    } else setMessage({ tone: 'warning', text: r.error });
+    setBusy(false);
+  };
+
+  return (
+    <div className="mt-2" aria-live="polite">
+      {status.kind === 'ready' ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Button variant="secondary" disabled={busy} onClick={() => void deepen()} icon={<Layers className="size-4" aria-hidden />}>
+            {busy ? 'Writing and checking…' : `Go deeper: write the ${stageName(status.stage)} check`}
+          </Button>
+          <span className="text-xs text-smoke">
+            {status.stage === 5 ? 'Written answers only, marked by the Examiner. ' : 'Harder questions from this lesson. '}Uses 1 of your daily AI requests.
+          </span>
+        </div>
+      ) : status.kind === 'waiting' ? (
+        <p className="flex items-center gap-1.5 text-xs text-smoke">
+          <Layers className="size-3.5" aria-hidden />Go deeper: reach {stageName(status.needs)} in {skill?.name ?? 'this skill'} to unlock a harder {stageName(status.stage)} check.
+        </p>
+      ) : (
+        <p className="flex items-center gap-1.5 text-xs text-smoke"><Layers className="size-3.5" aria-hidden />Every check up to Advanced is here.</p>
+      )}
+      {message && <Notice tone={message.tone} className="mt-2">{message.text}</Notice>}
     </div>
   );
 }

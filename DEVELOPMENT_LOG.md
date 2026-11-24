@@ -1,5 +1,37 @@
 # Development Log
 
+## 2026-11-17 — Phase 5 Part C1: "go deeper" for AI-made courses
+
+**Product owner decisions (2026-11-17):** Part C order is go deeper, then practical projects, then
+free talk. "Go deeper" starts as harder checks on the same lessons; *bookmarked* to review later
+whether AI courses should also get new, deeper lessons.
+
+**Built:**
+- engine: `src/engine/learning/deeper.ts` (which stage comes next, and whether the player is ready);
+- AI: a harder-check rule in the Course Builder's check prompt, and a written-only Advanced prompt
+  with a labelled fixture (`src/services/ai/roles/courseBuilder.ts`);
+- server: `deepen` in `src/services/subjects/subjectService.ts`, rows from `deeperCheckRows`
+  (`src/services/subjects/assemble.ts`); action `deepen_lesson`; `aiClient.deepenLesson`;
+- database: migration `20261117000400_go_deeper.sql`;
+- screen: a "Go deeper" line under each built lesson on the campaign page (AI-made courses only).
+
+**Choices (mine, within the design):**
+- *A Competent step first.* Lessons 1–2 of an AI course start with an Apprentice check only, so
+  without a Competent check those skills could never pass Competent. Going deeper adds it first.
+- *Built only when it can be taken.* A check above the player's reach would sit locked and waste a
+  request, so the button waits until the skill is at the stage below.
+- *Advanced is written-only (2 questions),* because the design already says Advanced is earned with
+  applied work only and the curriculum validator enforces it.
+- *Questions stay grounded in the lesson the player read,* which is itself quoted from the article.
+
+**Also fixed:** `supabase/tests/quests.test.ts` and the Researcher test in `supabase/tests/ai.test.ts`
+used fixed clock times of "today"; once real time passed them, the database (which stamps rows with
+its own clock) refused the answers. They now use the real clock. Not a game bug.
+
+**Known limitations:** no deeper check has been written live yet. The test account's skills are
+still Novice, so the live test covered the "not ready" refusal only (no AI request spent). Deeper
+checks reuse the lesson's own text, not new material (bookmarked).
+
 ## 2026-11-17 — Phase 5 Part B2: race traits and class abilities
 
 **Product owner decisions (2026-11-17):** Keen Insight removes a wrong option; Adaptable swaps the

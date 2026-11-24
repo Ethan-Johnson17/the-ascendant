@@ -11,8 +11,8 @@ import { Notice } from '../components/ui/Notice.tsx';
 import { LevelProgress } from '../features/progression/LevelProgress.tsx';
 import { LearningGate, SampleNote, StagePips } from '../features/learning/LearningUi.tsx';
 import { useCampaignLearning } from '../features/learning/useCampaignLearning.ts';
-import { useCourses } from '../features/subjects/CoursesProvider.tsx';
-import { GeneratedLabels, SubjectPlanPanel } from '../features/subjects/SubjectPanels.tsx';
+import { useCourses, type CourseInfo } from '../features/subjects/CoursesProvider.tsx';
+import { GeneratedLabels, GoDeeper, SubjectPlanPanel } from '../features/subjects/SubjectPanels.tsx';
 import { QuestSummaryPanel } from '../features/quests/QuestSummaryPanel.tsx';
 import { BossPanel } from '../features/bosses/BossPanel.tsx';
 import { defaultProgressionConfig } from '../engine/progression/config.ts';
@@ -77,7 +77,8 @@ export default function CampaignPage() {
           )}
 
           <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-            <Curriculum data={data} campaignId={campaign!.id} generated={!!template?.generated} />
+            <Curriculum data={data} campaignId={campaign!.id} generated={!!template?.generated}
+              deeper={template?.generated && !isSample ? { course: template, campaignActive: campaign!.status === 'active', onBuilt: reload } : null} />
             <div className="space-y-6">
               {template?.generated && !isSample && (
                 <SubjectPlanPanel
@@ -103,7 +104,11 @@ export default function CampaignPage() {
   );
 }
 
-function Curriculum({ data, campaignId, generated }: { data: CampaignLearning; campaignId: string; generated: boolean }) {
+function Curriculum({ data, campaignId, generated, deeper }: {
+  data: CampaignLearning; campaignId: string; generated: boolean;
+  /** AI-made courses only: the "go deeper" button under each lesson. */
+  deeper: { course: CourseInfo; campaignActive: boolean; onBuilt: () => Promise<void> } | null;
+}) {
   if (!data.hasCurriculum || (generated && data.counts.lessons === 0)) {
     return (
       <Panel eyebrow="Curriculum" title={generated ? 'Your course is planned' : 'Lessons are being written'}>
@@ -129,6 +134,7 @@ function Curriculum({ data, campaignId, generated }: { data: CampaignLearning; c
                     {o.activities.map((a) => <li key={a.id}><ActivityRow activity={a} campaignId={campaignId} /></li>)}
                   </ul>
                 )}
+                {deeper && <GoDeeper {...deeper} objective={o} competencies={data.competencies} />}
               </div>
             ))}
           </section>

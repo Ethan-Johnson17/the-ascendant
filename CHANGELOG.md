@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Phase 5 Part C1
+- "Go deeper" for courses you made with AI: under each lesson, the game can write a harder check
+  from the same lesson: Competent, then Proficient, then Advanced (written answers only).
+- The button appears only when you can take the check; otherwise it says what to reach first.
+  Each check uses 1 of your daily AI requests.
+- Fixed two tests that broke once the real clock passed their fixed test time.
+
 ## Unreleased — Phase 5 Part B2
 - Your race and class now matter in boss battles. Each gives one power, once per boss:
   - Human, Adaptable: swap the question for one on another skill.

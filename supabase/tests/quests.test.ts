@@ -36,8 +36,9 @@ before(async () => {
   await t.db.exec(curriculumSql(v.curriculum));
 });
 
-const learning = () => createLearningService(serviceStore(t), { now: () => new Date('2026-11-17T10:00:00Z') });
-const ai = () => createAiService(serviceStore(t), createDevelopmentFixtures(), { now: () => new Date('2026-11-17T10:00:00Z'), sleep: async () => {} });
+// The real clock: the database stamps attempts with its own now(), so a fixed test date breaks once it is past.
+const learning = () => createLearningService(serviceStore(t), { now: () => new Date() });
+const ai = () => createAiService(serviceStore(t), createDevelopmentFixtures(), { now: () => new Date(), sleep: async () => {} });
 
 async function newPlayer() {
   const u = await t.createUser();

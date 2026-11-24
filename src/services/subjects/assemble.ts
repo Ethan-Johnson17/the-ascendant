@@ -1,6 +1,7 @@
 import type { AttributeId } from '../../engine/character/attributes.ts';
-import { validateCurriculum, type AssessmentItem, type Citation, type Curriculum, type CurriculumInput } from '../../engine/learning/curriculum.ts';
-import type { CheckReply, CourseRequest, LessonReply, OutlineReply } from '../ai/roles/courseBuilder.ts';
+import { assessmentItemSchema, validateCurriculum, type AssessmentItem, type Citation, type Curriculum, type CurriculumInput } from '../../engine/learning/curriculum.ts';
+import { deeperDifficulty } from '../../engine/learning/deeper.ts';
+import type { AdvancedReply, CheckReply, CourseRequest, LessonReply, OutlineReply, WrittenReply } from '../ai/roles/courseBuilder.ts';
 import type { AdviceArea } from './topicGuard.ts';
 import type { WikiArticle } from './wikipedia.ts';
 
@@ -112,21 +113,15 @@ export interface BuiltLesson {
   readonly codexKeys: readonly string[];
 }
 
-/** One lesson and its check as a small curriculum, validated like any authored course. */
-export function assembleLesson(plan: SubjectPlan, lessonKey: string, lesson: LessonReply, check: CheckReply, checkedOn: string): { ok: true; built: BuiltLesson } | { ok: false; issues: readonly string[] } {
-  const index = plan.lessons.findIndex((l) => l.key === lessonKey);
-  const pl = plan.lessons[index];
-  if (!pl) return { ok: false, issues: ['unknown lesson'] };
-  const cite = (q: string): Citation[] => [{ source: pl.source, locator: quoteLocator(q) }];
-  const codexKeys = uniqueKeys(lesson.concepts.map((c) => `${lessonKey}-${c.title}`), 55);
-
-  const items: AssessmentItem[] = [
+/** A check's questions as game items. `keyPrefix` makes the keys (e.g. "l1-rivers" or "l1-rivers-s4"). */
+function checkItems(keyPrefix: string, codexKeys: readonly string[], check: CheckReply, deeper = false): AssessmentItem[] {
+  return [
     ...check.questions.map(
       (q, i): AssessmentItem => ({
-        key: `${lessonKey}-q${i + 1}`,
+        key: `${keyPrefix}-q${i + 1}`,
         kind: 'single_choice',
         concept: codexKeys[q.concept]!,
-        difficulty: q.difficulty as 1 | 2 | 3,
+        difficulty: deeper ? deeperDifficulty(q.difficulty) : (q.difficulty as 1 | 2 | 3),
         prompt: q.prompt.trim(),
         explanation: `${q.explanation.trim()}\n\nFrom the lesson: ${quoteLocator(q.support)}`.slice(0, 1200),
         errorCategory: 'misremembered_fact',
@@ -135,21 +130,36 @@ export function assembleLesson(plan: SubjectPlan, lessonKey: string, lesson: Les
         answer: String.fromCharCode(97 + q.correct),
       }),
     ),
-    {
-      key: `${lessonKey}-written`,
-      kind: 'written',
-      concept: codexKeys[check.written.concept]!,
-      difficulty: 2,
-      prompt: check.written.prompt.trim(),
-      explanation: 'Compare your answer with the model answer and the lesson.',
-      errorCategory: 'incomplete_explanation',
-      citations: [],
-      criteria: check.written.criteria.map((c, i) => ({ key: `c${i + 1}`, description: c.description.trim(), points: c.points })),
-      passPoints: check.written.passPoints,
-      modelAnswer: check.written.modelAnswer.trim(),
-      maxChars: 1200,
-    },
+    writtenItem(`${keyPrefix}-written`, codexKeys, check.written, deeper ? 3 : 2),
   ];
+}
+
+function writtenItem(key: string, codexKeys: readonly string[], w: WrittenReply, difficulty: 2 | 3): AssessmentItem {
+  return {
+    key,
+    kind: 'written',
+    concept: codexKeys[w.concept]!,
+    difficulty,
+    prompt: w.prompt.trim(),
+    explanation: 'Compare your answer with the model answer and the lesson.',
+    errorCategory: 'incomplete_explanation',
+    citations: [],
+    criteria: w.criteria.map((c, i) => ({ key: `c${i + 1}`, description: c.description.trim(), points: c.points })),
+    passPoints: w.passPoints,
+    modelAnswer: w.modelAnswer.trim(),
+    maxChars: 1200,
+  };
+}
+
+/** One lesson and its check as a small curriculum, validated like any authored course. */
+export function assembleLesson(plan: SubjectPlan, lessonKey: string, lesson: LessonReply, check: CheckReply, checkedOn: string): { ok: true; built: BuiltLesson } | { ok: false; issues: readonly string[] } {
+  const index = plan.lessons.findIndex((l) => l.key === lessonKey);
+  const pl = plan.lessons[index];
+  if (!pl) return { ok: false, issues: ['unknown lesson'] };
+  const cite = (q: string): Citation[] => [{ source: pl.source, locator: quoteLocator(q) }];
+  const codexKeys = uniqueKeys(lesson.concepts.map((c) => `${lessonKey}-${c.title}`), 55);
+
+  const items = checkItems(lessonKey, codexKeys, check);
   const questionCount = Math.min(3, check.questions.length);
 
   const input: CurriculumInput = {
@@ -216,6 +226,46 @@ export function assembleLesson(plan: SubjectPlan, lessonKey: string, lesson: Les
   const v = validateCurriculum(input);
   if (!v.ok) return { ok: false, issues: v.issues };
   return { ok: true, built: { curriculum: v.curriculum, codexKeys } };
+}
+
+/** The stage names deeper checks are titled with. */
+const stageTitles: Readonly<Record<number, string>> = { 3: 'Competent', 4: 'Proficient', 5: 'Advanced' };
+
+/**
+ * A "go deeper" check for a built lesson, as database rows for `ai_save_deeper_check`. Each item is
+ * validated with the same schema as every authored question; keys and the target stage are ours.
+ */
+export function deeperCheckRows(
+  templateId: string,
+  lesson: { key: string; title: string; competencyId: string; position: number },
+  codexKeys: readonly string[],
+  check: CheckReply | AdvancedReply,
+  stage: number,
+): { ok: true; activity: Record<string, unknown>; items: Record<string, unknown>[] } | { ok: false; issues: readonly string[] } {
+  const id = idOf(templateId);
+  const key = `${lesson.key}-check-${stage}`;
+  const prefix = `${lesson.key}-s${stage}`;
+  const advanced = !('questions' in check);
+  if (advanced !== (stage === 5)) return { ok: false, issues: ['an Advanced check must be written answers only'] };
+  const items = 'questions' in check
+    ? checkItems(prefix, codexKeys, check, true)
+    : check.written.map((w, i) => writtenItem(`${prefix}-written-${i + 1}`, codexKeys, w, 3));
+  const issues = items.flatMap((item) => {
+    const r = assessmentItemSchema.safeParse(item);
+    return r.success ? (codexKeys.includes(item.concept) ? [] : [`${item.key}: unknown concept`]) : r.error.issues.map((i) => `${item.key}: ${i.message}`);
+  });
+  if ('questions' in check && check.questions.length < 3) issues.push('too few questions');
+  if (issues.length) return { ok: false, issues };
+  return {
+    ok: true,
+    activity: {
+      id: id(key), template_id: templateId, objective_id: id(`${lesson.key}-goal`), key, kind: 'assessment',
+      title: `Check: ${lesson.title}: ${stageTitles[stage] ?? 'deeper'}`.slice(0, 120), position: lesson.position, competency_ids: [lesson.competencyId],
+      estimated_minutes: null, sections: null, introduces_ids: [], target_stage: stage,
+      question_count: 'questions' in check ? Math.min(3, check.questions.length) : check.written.length, written_count: 'questions' in check ? 1 : check.written.length,
+    },
+    items: items.map((item, position) => ({ id: id(item.key), activity_id: id(key), key: item.key, concept_id: id(item.concept), kind: item.kind, difficulty: item.difficulty, position, definition: item })),
+  };
 }
 
 // ───────────────────────────────────────────── Database rows

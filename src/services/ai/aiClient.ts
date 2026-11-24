@@ -80,6 +80,8 @@ const buildLessonReplySchema = z.object({
   usage: usageSchema,
 });
 export type BuildLessonReply = z.infer<typeof buildLessonReplySchema>;
+const deepenReplySchema = z.object({ activityId: z.string(), stage: z.number().int(), origin: z.enum(['ai', 'fixture']), droppedQuestions: z.number().int(), usage: usageSchema });
+export type DeepenReply = z.infer<typeof deepenReplySchema>;
 
 /** The Game Master's checked scene (no screen yet; quests use it in Phase 5). */
 const sceneReplySchema = z.object({
@@ -199,6 +201,8 @@ export function createAiClient(db: SupabaseClient) {
     createSubject: (request: NewSubjectRequest) => call(db, { action: 'create_subject', request }, createSubjectReplySchema),
     /** Builds the next lesson and its check of one of the player's subjects (2 AI requests). */
     buildLesson: (templateId: string) => call(db, { action: 'build_lesson', templateId }, buildLessonReplySchema),
+    /** "Go deeper": writes the next harder check for a lesson (1 AI request). */
+    deepenLesson: (templateId: string, lessonKey: string) => call(db, { action: 'deepen_lesson', templateId, lessonKey }, deepenReplySchema),
     /** The Game Master narrates the preview scene (1 AI request; changes nothing). For Phase 5 quests. */
     narrateScene: (campaignId: string, message: string | null = null, history: readonly { player: string; narration: string }[] = []) =>
       call(db, { action: 'narrate_scene', campaignId, message, history }, sceneReplySchema),

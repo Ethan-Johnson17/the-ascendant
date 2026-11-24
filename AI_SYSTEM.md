@@ -134,6 +134,17 @@ Lessons must be built in order; the previous lesson must be completed first. Bui
 requests from the player's 30 a day. If too little survives the checks, nothing is saved and the
 player can try again.
 
+**Go deeper (Phase 5 C1, 1 request each).** Action `deepen_lesson` {templateId, lessonKey}. The
+game decides the next stage (`src/engine/learning/deeper.ts`) and refuses, without an AI request,
+when the skill isn't ready or the lesson already reaches Advanced. For Competent and Proficient the
+Course Builder gets the same check prompt with one extra rule (harder questions about causes,
+consequences and connections the lesson states); `keepSupported` drops any question whose support
+passage isn't in the lesson, and at least 3 must survive. For Advanced it uses
+`buildAdvancedMessages` (exactly 2 written questions, `advancedReplySchema`); there are no answers to
+quote-check, the Examiner marks them later against their rubrics. Our code makes the keys, clamps
+difficulty to 2–3 and validates each question with the normal item schema; `ai_save_deeper_check`
+checks the order and ids again. The fixture provider has a labelled Advanced stand-in.
+
 Labels: every AI-made lesson shows "AI-generated, not reviewed by a person", its quoted source line,
 "Wikipedia, an encyclopedia, not an academic or primary source" and the CC BY-SA notice. Fixture
 courses say "Development fixture". "Report a mistake" saves the report and flags the lesson.
