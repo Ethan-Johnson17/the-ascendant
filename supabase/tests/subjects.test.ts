@@ -299,3 +299,48 @@ describe('Go deeper (database + service)', () => {
     assert.ok(await t.errorAsUser(u, `select public.ai_save_deeper_check($1, $2, $3, 3::smallint, '{}'::jsonb)`, [u, made.templateId, lessonKey]));
   });
 });
+
+describe('Practical project for an AI-made course (database + service)', () => {
+  it('is written once, only when every lesson is built and every skill is Proficient', async () => {
+    const u = await newPlayer();
+    let minutes = 0;
+    const svc = serviceWith(createDevelopmentFixtures(), fakeWikipedia(), () => new Date(Date.parse('2026-11-16T10:00:00Z') + (minutes += 5) * 60_000));
+    const made = (await create(svc, u)).body as { templateId: string; campaignId: string };
+    const write = () => svc.handle(u, { action: 'write_project', templateId: made.templateId });
+    const learning = createLearningService(serviceStore(t));
+
+    assert.deepEqual((await write()).body, { error: 'Build every lesson in this course first.', code: 'not_ready' });
+    for (let i = 0; i < 4; i++) {
+      const built = await svc.handle(u, { action: 'build_lesson', templateId: made.templateId });
+      assert.equal(built.status, 200, JSON.stringify(built.body));
+      await learning.handle(u, { action: 'complete_lesson', campaignId: made.campaignId, activityId: (built.body as { activityId: string }).activityId });
+    }
+    const before = (await logRows(u)).length;
+    const waiting = await write();
+    assert.deepEqual([waiting.status, (waiting.body as { code: string }).code], [409, 'not_ready']);
+    assert.match((waiting.body as { error: string }).error, /to Proficient first/);
+    assert.equal((await logRows(u)).length, before, 'no AI request while waiting');
+
+    await t.db.query('update public.competency_progress set mastery_stage = 4 where campaign_id = $1', [made.campaignId]);
+    const written = await write();
+    assert.equal(written.status, 200, JSON.stringify(written.body));
+    assert.equal((written.body as { origin: string }).origin, 'fixture');
+    assert.equal((await logRows(u)).length, before + 1, '1 request');
+    assert.deepEqual([(await write()).status, ((await write()).body as { code: string }).code], [409, 'complete']);
+
+    const project = await t.asUser(u, async (tx) => (await tx.query<{ id: string; is_project: boolean; target_stage: number; competency_ids: string[]; objective_id: string }>(
+      `select id, is_project, target_stage, competency_ids, objective_id from public.learning_activities where template_id = $1 and is_project`, [made.templateId])).rows);
+    assert.equal(project.length, 1);
+    assert.deepEqual([project[0]!.target_stage, project[0]!.objective_id], [5, `${made.templateId}/project-goal`]);
+    const taught = await t.asUser(u, async (tx) => (await tx.query<{ c: string }>(
+      `select distinct unnest(competency_ids) as c from public.learning_activities where template_id = $1 and kind = 'lesson' order by 1`, [made.templateId])).rows.map((r) => r.c));
+    assert.deepEqual([...project[0]!.competency_ids].sort(), [...taught].sort(), 'covers every skill the lessons teach');
+
+    await winBossesAs(t, u, made.campaignId);
+    const start = await learning.handle(u, { action: 'start_check', campaignId: made.campaignId, activityId: project[0]!.id });
+    // No Examiner in this learning service, so an all-written project waits for it, as designed.
+    assert.deepEqual([start.status, (start.body as { code?: string }).code], [503, 'examiner_unavailable']);
+    assert.ok(await t.errorAsUser(u, `select public.ai_save_project($1, $2, '{}'::jsonb)`, [u, made.templateId]));
+    assert.ok(await t.errorAsUser(u, `select public.ai_project_context($1, $2)`, [u, made.templateId]));
+  });
+});

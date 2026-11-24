@@ -45,7 +45,7 @@ export const campaignTemplates: readonly CampaignTemplate[] = [
     description:
       'Walk the floodplains between two rivers, where irrigation, writing, written law and some of the world’s earliest cities took shape. ' +
       'Learn how geography shaped settlement, how city-states governed and traded, and how historians read the evidence left behind.',
-    curriculumVersion: 2,
+    curriculumVersion: 3,
     subSkills: {
       str: 'Power and conflict',
       dex: 'Working with evidence',

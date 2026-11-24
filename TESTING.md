@@ -39,6 +39,25 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-23 — Phase 5 Part C2 (practical projects)
+Automated: **329 tests, 329 passing**; typecheck and production build clean.
+
+New unit tests (`src/engine/learning/projects.test.ts`): when an AI course's project can be written;
+the validator rejects a project that isn't one written task for Advanced.
+
+New database tests (`supabase/tests/projects.test.ts`): the pilot has three projects; a project
+opens only at Proficient and hides its rubric; a pass pays 75 XP once and counts once, so a second
+project pass changes nothing and an Advanced check on another day completes Advanced; the database
+refuses Advanced from project passes alone and the wrong XP for a project. In
+`supabase/tests/subjects.test.ts`: an AI course's project is written once, only when every lesson is
+built and every skill is Proficient (no AI request while waiting), covers every taught skill, and
+players can't call its functions.
+
+Live (2026-11-23): migrations applied; `learning` and `ai` functions deployed. Mesopotamia shows the
+three projects, locked ("reach Proficient first"); the project page explains the rules; the
+deployed server refused starting a project (boss below not beaten) and writing the Volcanoes
+project (lessons not all built), with no AI request. Not yet tried live: passing a project.
+
 ### 2026-11-17 — Phase 5 Part C1 ("go deeper")
 Automated: **322 tests, 322 passing**; typecheck and production build clean.
 

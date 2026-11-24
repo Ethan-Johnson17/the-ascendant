@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.tsx';
 import { createAiClient } from '../../services/ai/aiClient.ts';
 import { cn } from '../../utils/cn.ts';
 import { deeperStatus } from '../../engine/learning/deeper.ts';
+import { projectStatus } from '../../engine/learning/projects.ts';
 import { masteryStages } from '../../engine/character/attributeGrowth.ts';
 import type { CompetencyView, ObjectiveView } from '../../services/learning/learningData.ts';
 import { adviceNote, useCourses, type CourseInfo } from './CoursesProvider.tsx';
@@ -37,8 +38,10 @@ export function GeneratedLabels({ course }: { course: CourseInfo }) {
  * The course plan of an AI-made subject: its 4 lessons, which are built, and the button that builds
  * the next one (2 AI requests). Also closes the subject to free a slot.
  */
-export function SubjectPlanPanel({ course, completedLessonIds, campaignActive, onBuilt }: {
+export function SubjectPlanPanel({ course, completedLessonIds, campaignActive, onBuilt, hasProject, lessonSkills }: {
   course: CourseInfo; completedLessonIds: ReadonlySet<string>; campaignActive: boolean; onBuilt: () => Promise<void>;
+  /** For the practical project: whether it is written, and the skills the lessons teach. */
+  hasProject: boolean; lessonSkills: readonly CompetencyView[];
 }) {
   const { client } = useAuth();
   const game = useGame();
@@ -115,6 +118,10 @@ export function SubjectPlanPanel({ course, completedLessonIds, campaignActive, o
       )}
 
       <div aria-live="polite">{message && <Notice tone={message.tone} className="mt-4">{message.text}</Notice>}</div>
+
+      {!g.closed && (
+        <ProjectLine course={course} hasProject={hasProject} lessonSkills={lessonSkills} campaignActive={campaignActive} onBuilt={onBuilt} />
+      )}
 
       {!g.closed && (
         <div className="mt-5 border-t border-iron/60 pt-4">
@@ -239,6 +246,53 @@ export function GoDeeper({ course, objective, competencies, campaignActive, onBu
         </p>
       ) : (
         <p className="flex items-center gap-1.5 text-xs text-smoke"><Layers className="size-3.5" aria-hidden />Every check up to Advanced is here.</p>
+      )}
+      {message && <Notice tone={message.tone} className="mt-2">{message.text}</Notice>}
+    </div>
+  );
+}
+
+/**
+ * The course's practical project: written once by the Course Builder (1 AI request) when every lesson
+ * is built and every skill the lessons teach is Proficient. Until then it says what is still needed.
+ */
+function ProjectLine({ course, hasProject, lessonSkills, campaignActive, onBuilt }: {
+  course: CourseInfo; hasProject: boolean; lessonSkills: readonly CompetencyView[]; campaignActive: boolean; onBuilt: () => Promise<void>;
+}) {
+  const { client } = useAuth();
+  const api = useMemo(() => (client ? createAiClient(client) : null), [client]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: 'info' | 'warning'; text: string } | null>(null);
+  const status = projectStatus({ hasProject, allBuilt: course.generated!.lessons.every((l) => l.built), competencies: lessonSkills });
+
+  const write = async () => {
+    if (!api || busy) return;
+    setBusy(true);
+    setMessage(null);
+    const r = await api.writeProject(course.id);
+    if (r.ok) {
+      await onBuilt();
+      setMessage({ tone: 'info', text: 'Project ready. You’ll find it at the end of your path.' });
+    } else setMessage({ tone: 'warning', text: r.error });
+    setBusy(false);
+  };
+
+  return (
+    <div className="mt-5 border-t border-iron/60 pt-4" aria-live="polite">
+      <p className="text-xs uppercase tracking-wider text-smoke">Practical project</p>
+      {status.kind === 'written' ? (
+        <p className="mt-1 text-sm text-vital">Written. It’s at the end of your path: one task that proves Advanced.</p>
+      ) : status.kind === 'ready' ? (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Button variant="secondary" disabled={busy || !campaignActive} onClick={() => void write()} icon={<Hammer className="size-4" aria-hidden />}>
+            {busy ? 'Writing the project…' : 'Write the project'}
+          </Button>
+          <span className="text-xs text-smoke">{campaignActive ? 'One task that uses the whole course. Uses 1 of your daily AI requests, once.' : 'Resume the campaign first.'}</span>
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-ash">
+          {status.kind === 'not_built' ? 'Opens once every lesson is built and every skill is Proficient.' : `Opens when ${status.needs.join(', ')} ${status.needs.length === 1 ? 'reaches' : 'reach'} Proficient.`}
+        </p>
       )}
       {message && <Notice tone={message.tone} className="mt-2">{message.text}</Notice>}
     </div>

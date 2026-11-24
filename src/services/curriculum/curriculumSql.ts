@@ -85,11 +85,11 @@ export function curriculumSql(c: Curriculum): string {
       const sections = a.sections.map((s) => ({ ...s, citations: citations(s.citations) }));
       out.push(
         upsert('learning_activities', {
-          ...common, estimated_minutes: lit(a.estimatedMinutes), sections: json(sections), introduces_ids: arr(ids(a.introduces)), target_stage: 'null', question_count: 'null', written_count: lit(0),
+          ...common, estimated_minutes: lit(a.estimatedMinutes), sections: json(sections), introduces_ids: arr(ids(a.introduces)), target_stage: 'null', question_count: 'null', written_count: lit(0), is_project: 'false',
         }),
       );
     } else {
-      out.push(upsert('learning_activities', { ...common, estimated_minutes: 'null', sections: 'null', introduces_ids: arr([]), target_stage: lit(a.targetStage), question_count: lit(a.questionCount), written_count: lit(a.writtenCount) }));
+      out.push(upsert('learning_activities', { ...common, estimated_minutes: 'null', sections: 'null', introduces_ids: arr([]), target_stage: lit(a.targetStage), question_count: lit(a.questionCount), written_count: lit(a.writtenCount), is_project: a.project ? 'true' : 'false' }));
       a.items.forEach((item, ii) => {
         out.push(
           upsert('assessment_items', {

@@ -41,6 +41,7 @@ const rowSchemas = {
       target_stage: z.number().nullable(),
       question_count: z.number().nullable(),
       written_count: z.number().default(0),
+      is_project: z.boolean().default(false),
     }),
   ),
   codex: z.array(
@@ -165,6 +166,8 @@ export interface CheckView {
   readonly questionCount: number;
   /** Questions in each attempt that are written answers, marked by the Examiner (AI). */
   readonly writtenCount: number;
+  /** A practical project: one written task proving Advanced. */
+  readonly isProject: boolean;
   readonly unlocked: boolean;
   /** Locked only because the boss of the stage below isn't beaten yet. */
   readonly bossLocked: boolean;
@@ -308,7 +311,7 @@ export function buildCampaignLearning(p: Parsed, now: Date): CampaignLearning {
       const bossLocked = stageOk && !bossGateOpen(target, wonBosses) && !passes.some((t) => t.counted);
       activities.set(a.id, {
         kind: 'assessment', id: a.id, key: keyOf(a.id), title: a.title, competencyIds: a.competency_ids, targetStage: target,
-        targetStageName: masteryStages[target - 1] ?? '', questionCount: a.question_count ?? 0, writtenCount: a.written_count,
+        targetStageName: masteryStages[target - 1] ?? '', questionCount: a.question_count ?? 0, writtenCount: a.written_count, isProject: a.is_project,
         unlocked: stageOk && !bossLocked,
         bossLocked,
         passes: passes.length,
@@ -425,7 +428,7 @@ export async function loadCampaignLearning(db: SupabaseClient, campaign: { id: s
   const cid = campaign.id;
   const results = await Promise.all([
     own(db.from('curriculum_nodes').select('id, parent_id, kind, title, summary, position').eq('template_id', t)),
-    own(db.from('learning_activities').select('id, objective_id, kind, title, position, competency_ids, estimated_minutes, sections, introduces_ids, target_stage, question_count, written_count').eq('template_id', t)),
+    own(db.from('learning_activities').select('id, objective_id, kind, title, position, competency_ids, estimated_minutes, sections, introduces_ids, target_stage, question_count, written_count, is_project').eq('template_id', t)),
     own(db.from('codex_entries').select('id, title, summary, explanation, examples, applications, related_ids, competency_ids, certainty, citations').eq('template_id', t)),
     own(db.from('sources').select('id, title, author, publisher, url, source_type, publication_date, verification_status, checked_on').eq('template_id', t)),
     own(db.from('competency_definitions').select('id, name, description, attribute').eq('template_id', t).order('id')),

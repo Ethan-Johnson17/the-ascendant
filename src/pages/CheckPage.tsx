@@ -16,6 +16,7 @@ import type { Answer } from '../engine/learning/grading.ts';
 import type { CampaignLearning, CheckView } from '../services/learning/learningData.ts';
 import type { CheckResult, IssuedItem, StartedCheck } from '../services/learning/learningClient.ts';
 import { cn } from '../utils/cn.ts';
+import { defaultProgressionConfig } from '../engine/progression/config.ts';
 
 type Phase = { name: 'intro' } | { name: 'answering'; check: StartedCheck } | { name: 'result'; check: StartedCheck; result: CheckResult; answers: Record<string, Answer> };
 
@@ -64,7 +65,7 @@ export default function CheckPage() {
             <Link to={back} className="inline-flex min-h-11 items-center gap-2 text-sm text-ash hover:text-ink">
               <ArrowLeft className="size-4" aria-hidden /> Back to campaign
             </Link>
-            <PageHeader eyebrow={`Knowledge check · proves ${check.targetStageName}`} title={check.title} />
+            <PageHeader eyebrow={`${check.isProject ? 'Practical project' : 'Knowledge check'} · proves ${check.targetStageName}`} title={check.title} />
             {isSample && <SampleNote />}
             {error && <Notice tone="warning">{error}</Notice>}
 
@@ -138,6 +139,17 @@ function Intro({ check, data, canStart, paused, busy, onStart }: { check: CheckV
   const comps = data.competencies.filter((c) => check.competencyIds.includes(c.id));
   return (
     <Panel tone="accent">
+      {check.isProject ? (
+        <ul className="space-y-2 text-ink">
+          <li>One practical task: write your answer in your own words (up to 2,000 characters).</li>
+          <li>The Examiner (AI) marks it against a rubric. If it isn’t sure, the attempt doesn’t count and costs you nothing.</li>
+          <li>
+            A pass counts once as evidence toward <strong className="text-gold-200">{check.targetStageName}</strong> in {comps.map((c) => c.name).join(' and ')}.
+            The other pass must come from an Advanced check.
+          </li>
+          <li>{defaultProgressionConfig.baseXp.practical_project_completed} XP the first time you pass. You can try again as often as you like.</li>
+        </ul>
+      ) : (
       <ul className="space-y-2 text-ink">
         <li>
           {check.questionCount} questions, chosen for you by the game
@@ -156,6 +168,7 @@ function Intro({ check, data, canStart, paused, busy, onStart }: { check: CheckV
         </li>
         <li>XP is paid the first time you pass. Mistakes go to your Weakness Bank for review; they never cost you progress.</li>
       </ul>
+      )}
       {check.passes > 0 && <p className="mt-3 text-sm text-ash">You’ve passed this check {check.passes}× (best {Math.round((check.bestScore ?? 0) * 100)}%).</p>}
       {!check.unlocked && (
         <Notice tone="warning" className="mt-4">

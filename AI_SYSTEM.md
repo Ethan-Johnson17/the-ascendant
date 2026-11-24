@@ -145,6 +145,16 @@ quote-check, the Examiner marks them later against their rubrics. Our code makes
 difficulty to 2–3 and validates each question with the normal item schema; `ai_save_deeper_check`
 checks the order and ids again. The fixture provider has a labelled Advanced stand-in.
 
+**Practical project (Phase 5 C2, 1 request, once per course).** Action `write_project` {templateId}.
+The game decides readiness (`src/engine/learning/projects.ts`: every lesson built, every skill the
+lessons teach at Proficient, no project yet) and refuses without an AI request otherwise.
+`buildProjectMessages` gives the Course Builder the course's lessons (each cut to 2,500 characters)
+inside `<lessons>` delimiters and asks for one realistic task, 3–5 criteria, the pass mark and a
+model answer, all from the lessons (`projectReplySchema`). `keepProject` keeps the pass mark between
+half and all of the points. Our code makes the ids and validates the task with the normal item
+schema; `ai_save_project` checks readiness and ids again. The Examiner marks attempts as usual. The
+fixture provider has a labelled project stand-in.
+
 Labels: every AI-made lesson shows "AI-generated, not reviewed by a person", its quoted source line,
 "Wikipedia, an encyclopedia, not an academic or primary source" and the CC BY-SA notice. Fixture
 courses say "Development fixture". "Report a mistake" saves the report and flags the lesson.

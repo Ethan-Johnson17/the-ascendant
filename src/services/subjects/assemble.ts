@@ -1,7 +1,7 @@
 import type { AttributeId } from '../../engine/character/attributes.ts';
 import { assessmentItemSchema, validateCurriculum, type AssessmentItem, type Citation, type Curriculum, type CurriculumInput } from '../../engine/learning/curriculum.ts';
 import { deeperDifficulty } from '../../engine/learning/deeper.ts';
-import type { AdvancedReply, CheckReply, CourseRequest, LessonReply, OutlineReply, WrittenReply } from '../ai/roles/courseBuilder.ts';
+import type { AdvancedReply, CheckReply, CourseRequest, LessonReply, OutlineReply, ProjectReply, WrittenReply } from '../ai/roles/courseBuilder.ts';
 import type { AdviceArea } from './topicGuard.ts';
 import type { WikiArticle } from './wikipedia.ts';
 
@@ -262,9 +262,49 @@ export function deeperCheckRows(
       id: id(key), template_id: templateId, objective_id: id(`${lesson.key}-goal`), key, kind: 'assessment',
       title: `Check: ${lesson.title}: ${stageTitles[stage] ?? 'deeper'}`.slice(0, 120), position: lesson.position, competency_ids: [lesson.competencyId],
       estimated_minutes: null, sections: null, introduces_ids: [], target_stage: stage,
-      question_count: 'questions' in check ? Math.min(3, check.questions.length) : check.written.length, written_count: 'questions' in check ? 1 : check.written.length,
+      question_count: 'questions' in check ? Math.min(3, check.questions.length) : check.written.length, written_count: 'questions' in check ? 1 : check.written.length, is_project: false,
     },
     items: items.map((item, position) => ({ id: id(item.key), activity_id: id(key), key: item.key, concept_id: id(item.concept), kind: item.kind, difficulty: item.difficulty, position, definition: item })),
+  };
+}
+
+/**
+ * An AI-made course's practical project as database rows for `ai_save_project`: its objective, the
+ * project (a check marked as a project, proving Advanced) and its one written task.
+ */
+export function projectRows(
+  templateId: string,
+  topicId: string,
+  competencyIds: readonly string[],
+  codexKeys: readonly string[],
+  reply: ProjectReply,
+): { ok: true; node: Record<string, unknown>; activity: Record<string, unknown>; item: Record<string, unknown> } | { ok: false; issues: readonly string[] } {
+  const id = idOf(templateId);
+  const definition: AssessmentItem = {
+    key: 'project-task',
+    kind: 'written',
+    concept: codexKeys[reply.concept]!,
+    difficulty: 3,
+    prompt: reply.prompt.trim(),
+    explanation: 'Compare your answer with the model answer and the course’s lessons.',
+    errorCategory: 'incorrect_application',
+    citations: [],
+    criteria: reply.criteria.map((c, i) => ({ key: `c${i + 1}`, description: c.description.trim(), points: c.points })),
+    passPoints: reply.passPoints,
+    modelAnswer: reply.modelAnswer.trim(),
+    maxChars: 2000,
+  };
+  const parsed = assessmentItemSchema.safeParse(definition);
+  if (!parsed.success) return { ok: false, issues: parsed.error.issues.map((i) => i.message) };
+  return {
+    ok: true,
+    node: { id: id('project-goal'), template_id: templateId, parent_id: topicId, kind: 'objective', key: 'project-goal', title: 'Apply the whole course in a practical project.', summary: '', position: 4 },
+    activity: {
+      id: id('project'), template_id: templateId, objective_id: id('project-goal'), key: 'project', kind: 'assessment',
+      title: `Project: ${reply.title.trim()}`.slice(0, 120), position: 0, competency_ids: [...competencyIds],
+      estimated_minutes: null, sections: null, introduces_ids: [], target_stage: 5, question_count: 1, written_count: 1, is_project: true,
+    },
+    item: { id: id('project-task'), activity_id: id('project'), key: 'project-task', concept_id: id(definition.concept), kind: 'written', difficulty: 3, position: 0, definition: parsed.data },
   };
 }
 
@@ -310,8 +350,8 @@ export function lessonRows(c: Curriculum) {
   const activities = objective.activities.map((a, position) => {
     const common = { id: id(a.key), template_id: c.templateId, objective_id: id(objective.key), key: a.key, kind: a.kind, title: a.title, position, competency_ids: a.competencies.map(id) };
     return a.kind === 'lesson'
-      ? { ...common, estimated_minutes: a.estimatedMinutes, sections: a.sections.map((s) => ({ ...s, citations: cites(s.citations) })), introduces_ids: a.introduces.map(id), target_stage: null, question_count: null, written_count: 0 }
-      : { ...common, estimated_minutes: null, sections: null, introduces_ids: [], target_stage: a.targetStage, question_count: a.questionCount, written_count: a.writtenCount };
+      ? { ...common, estimated_minutes: a.estimatedMinutes, sections: a.sections.map((s) => ({ ...s, citations: cites(s.citations) })), introduces_ids: a.introduces.map(id), target_stage: null, question_count: null, written_count: 0, is_project: false }
+      : { ...common, estimated_minutes: null, sections: null, introduces_ids: [], target_stage: a.targetStage, question_count: a.questionCount, written_count: a.writtenCount, is_project: a.project };
   });
   const items = objective.activities.flatMap((a) =>
     a.kind === 'assessment'

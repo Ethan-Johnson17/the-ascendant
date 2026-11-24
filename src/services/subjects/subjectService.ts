@@ -5,10 +5,11 @@ import { runStructured } from '../ai/structured.ts';
 import type { createUsageLog } from '../ai/usageLog.ts';
 import { AiError, noUsage, type AiMessage, type AiProvider } from '../ai/types.ts';
 import {
-  advancedReplySchema, buildAdvancedMessages, buildCheckMessages, keepAdvanced, buildLessonMessages, buildOutlineMessages, checkReplySchema, courseRequestSchema, keepQuoted, keepSupported, lessonReplySchema,
+  advancedReplySchema, buildAdvancedMessages, buildCheckMessages, buildProjectMessages, keepAdvanced, keepProject, projectReplySchema, buildLessonMessages, buildOutlineMessages, checkReplySchema, courseRequestSchema, keepQuoted, keepSupported, lessonReplySchema,
   outlineReplySchema, type CourseRequest,
 } from '../ai/roles/courseBuilder.ts';
-import { assembleLesson, deeperCheckRows, lessonRows, lessonText, planSubject, subjectRows, type SubjectPlan } from './assemble.ts';
+import { assembleLesson, deeperCheckRows, lessonRows, lessonText, planSubject, projectRows, subjectRows, type SubjectPlan } from './assemble.ts';
+import { projectStatus } from '../../engine/learning/projects.ts';
 import { deepestStage, deeperStatus } from '../../engine/learning/deeper.ts';
 import { checkTopic, combineAdvice } from './topicGuard.ts';
 import type { Wikipedia } from './wikipedia.ts';
@@ -65,6 +66,18 @@ const deepenContextSchema = z.object({
   competencyId: z.string(),
   competencyName: z.string(),
   skillStage: z.number().int(),
+});
+const projectContextSchema = z.object({
+  campaignId: z.uuid().nullable(),
+  campaignStatus: z.enum(['active', 'paused', 'completed']).nullable(),
+  closed: z.boolean(),
+  allBuilt: z.boolean(),
+  hasProject: z.boolean(),
+  title: z.string(),
+  topicId: z.string().nullable(),
+  lessons: z.array(z.object({ title: z.string(), sections: z.array(z.object({ heading: z.string(), paragraphs: z.array(z.string()) })) })),
+  codex: z.array(z.object({ key: z.string(), title: z.string() })),
+  competencies: z.array(z.object({ id: z.string(), name: z.string(), stage: z.number().int() })),
 });
 const stageName: Readonly<Record<number, string>> = { 1: 'Novice', 2: 'Apprentice', 3: 'Competent', 4: 'Proficient', 5: 'Advanced' };
 
@@ -274,5 +287,32 @@ export function createSubjectService(d: SubjectServiceDeps) {
     };
   }
 
-  return { create, build, deepen };
+  /**
+   * Writes an AI-made course's practical project (1 request, once), from its lessons. Only when every
+   * lesson is built and every skill they teach is Proficient; the database checks this again.
+   */
+  async function writeProject(userId: string, templateId: string): Promise<SubjectResponse> {
+    const raw = await d.store.call('ai_project_context', { p_user_id: userId, p_template_id: templateId });
+    if (raw === null) return { status: 404, body: { error: 'That course was not found.' } };
+    const ctx = projectContextSchema.parse(raw);
+    if (ctx.closed || ctx.campaignStatus !== 'active' || !ctx.campaignId) return { status: 409, body: { error: 'This subject is closed or paused, so nothing new is built.', code: 'not_active' } };
+    const status = projectStatus(ctx);
+    if (status.kind === 'written') return { status: 409, body: { error: 'This course already has its project.', code: 'complete' } };
+    if (status.kind === 'not_built') return { status: 409, body: { error: 'Build every lesson in this course first.', code: 'not_ready' } };
+    if (status.kind === 'waiting') return { status: 409, body: { error: `Bring ${status.needs.join(', ')} to Proficient first; the project is written when you can take it.`, code: 'not_ready' } };
+    if (!d.provider) return { status: failure.not_configured.status, body: { error: failure.not_configured.error, code: 'not_configured' } };
+    if ((await d.log.usage(userId)).remaining < 1) return { status: 429, body: await limitBody(userId) };
+    if (!ctx.topicId || ctx.codex.length === 0) return { status: 409, body: { error: 'This course has no lessons to build a project from.', code: 'not_ready' } };
+
+    const lessons = ctx.lessons.map((l) => ({ title: l.title, text: l.sections.map((s) => [s.heading, ...s.paragraphs].join('\n')).join('\n\n') }));
+    const asked = await ask(userId, ctx.campaignId, 'course_project', buildProjectMessages({ courseTitle: ctx.title, lessons, concepts: ctx.codex.map((c) => c.title) }),
+      projectReplySchema, cb.projectTokens, { kind: 'project', conceptCount: ctx.codex.length });
+    if (!asked.ok) return asked.response;
+    const rows = projectRows(templateId, ctx.topicId, ctx.competencies.map((c) => c.id), ctx.codex.map((c) => c.key), keepProject(asked.data, ctx.codex.length));
+    if (!rows.ok) return { status: 422, body: { error: 'The project didn’t pass the game’s course checks, so it wasn’t saved. Please try again.', code: 'invalid', issues: rows.issues.slice(0, 10) } };
+    await d.store.call('ai_save_project', { p_user_id: userId, p_template_id: templateId, p_rows: { node: rows.node, activity: rows.activity, item: rows.item } });
+    return { status: 200, body: { activityId: rows.activity.id, origin: asked.origin, usage: usageBody(asked.usedToday) } };
+  }
+
+  return { create, build, deepen, writeProject };
 }
