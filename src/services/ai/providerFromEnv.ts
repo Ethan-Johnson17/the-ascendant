@@ -10,6 +10,8 @@ import { fixtureTutorAnswer, tutorMaterialSchema } from './roles/tutor.ts';
 import { fixtureScene, type Scene } from './roles/gameMaster.ts';
 import { bossContextSchema, fixtureStrategy } from './roles/strategist.ts';
 import type { AiProvider } from './types.ts';
+import { fixtureTalk } from './roles/talk.ts';
+import type { TalkCharacter } from '../../content/characters.ts';
 
 /** Development fixtures for every role that has one. */
 export function createDevelopmentFixtures(): AiProvider {
@@ -20,6 +22,8 @@ export function createDevelopmentFixtures(): AiProvider {
     },
     researcher: () => fixtureResearch(),
     game_master: (req) => {
+      const talk = (req.fixtureHint as { talk?: { character: TalkCharacter; links: { id: string }[] } } | undefined)?.talk;
+      if (talk) return fixtureTalk(talk.character, talk.links);
       const scene = (req.fixtureHint as { scene?: Scene } | undefined)?.scene;
       if (!scene) throw new Error('The Game Master fixture needs the scene.');
       return fixtureScene(scene);

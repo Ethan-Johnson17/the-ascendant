@@ -212,7 +212,16 @@ export function createAiClient(db: SupabaseClient) {
     /** The Strategist proposes a boss from the course's checked questions (1 AI request; nothing saved). For Phase 5. */
     planBoss: (campaignId: string) => call(db, { action: 'plan_boss', campaignId }, bossReplySchema),
     /** The Game Master tells a quest's story (1 AI request the first time; saved afterwards). */
+    /** Talks with a course's character (1 AI request per message; story only). */
+    talk: (campaignId: string, characterId: string, message: string) => call(db, { action: 'talk', campaignId, characterId, message }, talkReplySchema),
     narrateQuest: (campaignId: string, questKey: string) => call(db, { action: 'narrate_quest', campaignId, questKey }, questStoryReplySchema),
   };
 }
 export type AiClient = ReturnType<typeof createAiClient>;
+const talkReplySchema = z.object({
+  reply: z.object({ lines: z.array(z.string()), suggestions: z.array(z.string()) }),
+  origin: z.enum(['ai', 'fixture']),
+  nextLesson: z.object({ key: z.string(), title: z.string() }).nullable(),
+  usage: usageSchema,
+});
+export type TalkReplyView = z.infer<typeof talkReplySchema>;

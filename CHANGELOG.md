@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 5 Part C3
+- Talk with characters: a "Talk" button on each campaign. Every course has the Guide; Mesopotamia
+  also has the Scribe of Uruk and the Merchant of Ur.
+- Characters speak in character, only about ideas you've unlocked in the Codex, and can point you to
+  your next lesson, your quests or the Codex. Talking never changes your progress.
+- Each message uses 1 daily AI request. Your last 20 messages with each character are kept, and you
+  can clear a conversation.
+
 ## Unreleased — Phase 5 Part C2
 - Practical projects: one written task at the end of each topic, marked by the Examiner. Pass it
   for 75 XP (once). It counts as one of the two passes you need for Advanced; the other comes from

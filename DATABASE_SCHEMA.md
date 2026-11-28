@@ -109,6 +109,12 @@ Migration `supabase/migrations/20261116000500_generated_subjects.sql` (tested of
 - Service-role functions: `ai_subject_slots`, `ai_create_subject` (locks per player, enforces the
   open-subject limit, checks shape and ids), `ai_course_context`, `ai_save_lesson` (lessons in order;
   records the article revision).
+- Talk with characters (Phase 5 C3, migration `20261128000100_talk.sql`): `talk_messages` (one row
+  per message: campaign, character id, speaker, text, origin of a character's line, suggested
+  places). Players read and delete (clear) their own; only the server adds messages. Service-role
+  `ai_talk_context` (the hero, unlocked Codex entries, next lesson, latest messages) and
+  `ai_save_talk` (saves an exchange, keeps the last 20 per character, one at a time per
+  conversation). Character definitions are content (`src/content/characters.ts`), not tables.
 - Practical projects (Phase 5 C2, migration `20261123000100_practical_projects.sql`):
   `learning_activities.is_project` (a project must be a stage-5 check with one written question).
   `learning_competency_state` counts at most one project pass per competency and reports

@@ -18,6 +18,17 @@ import { loadQuests } from '../quests/questService.ts';
 import { bossContextSchema, buildStrategistMessages, checkStrategy, strategistReplySchema, toBank } from './roles/strategist.ts';
 import { bossReadiness, focusBank } from '../../engine/encounters/bossPlan.ts';
 import type { AiRole } from './types.ts';
+import { buildTalkMessages, checkTalk, talkReplySchema } from './roles/talk.ts';
+import { charactersFor } from '../../content/characters.ts';
+
+const talkContextSchema = z.object({
+  templateId: z.string(),
+  campaignTitle: z.string(),
+  character: z.object({ name: z.string(), race: z.string(), className: z.string() }).nullable(),
+  known: z.array(z.object({ title: z.string(), summary: z.string() })),
+  nextLesson: z.object({ key: z.string(), title: z.string() }).nullable(),
+  history: z.array(z.object({ speaker: z.enum(['player', 'character']), text: z.string() })),
+});
 
 /**
  * The server side of AI features: what the `ai` Edge Function runs for each request.
@@ -66,6 +77,12 @@ export const aiRequestSchema = z.discriminatedUnion('action', [
       .array(z.object({ player: z.string().max(defaultAiConfig.gameMaster.maxMessageChars), narration: z.string().max(1500) }))
       .max(defaultAiConfig.gameMaster.maxHistoryTurns)
       .default([]),
+  }),
+  z.object({
+    action: z.literal('talk'),
+    campaignId: z.uuid(),
+    characterId: z.string().regex(/^[a-z0-9-]{1,40}$/),
+    message: z.string().trim().min(1).max(defaultAiConfig.talk.maxMessageChars),
   }),
   z.object({ action: z.literal('plan_boss'), campaignId: z.uuid() }),
   z.object({ action: z.literal('narrate_quest'), campaignId: z.uuid(), questKey: z.string().regex(/^[a-z0-9-]{1,150}$/) }),
@@ -398,6 +415,47 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
   }
 
   /**
+   * Free talk with a course's character (1 request per message). Story only: nothing is changed but
+   * the saved conversation. The character may state facts only from the player's unlocked Codex
+   * entries and suggest only the game's own places.
+   */
+  async function talk(userId: string, req: Extract<z.infer<typeof aiRequestSchema>, { action: 'talk' }>): Promise<AiResponse> {
+    const tc = config.talk;
+    const raw = await store.call('ai_talk_context', { p_user_id: userId, p_campaign_id: req.campaignId, p_character_id: req.characterId, p_history: tc.historyMessages });
+    if (raw === null) return { status: 404, body: { error: 'That campaign was not found.' } };
+    const ctx = talkContextSchema.parse(raw);
+    const character = charactersFor(ctx.templateId).find((c) => c.id === req.characterId);
+    if (!character) return { status: 404, body: { error: 'That character isn’t in this course.' } };
+    const links = [
+      ...(ctx.nextLesson ? [{ id: 'next_lesson', meaning: `the hero's next lesson, “${ctx.nextLesson.title}”` }] : []),
+      { id: 'quests', meaning: 'the hero’s quests in this course' },
+      { id: 'codex', meaning: 'the Codex, where the hero’s learned ideas are kept' },
+    ];
+    const hero = ctx.character ? `${ctx.character.name}, a ${ctx.character.race} ${ctx.character.className}` : 'a new adventurer';
+    const messages = buildTalkMessages(
+      { campaignTitle: ctx.campaignTitle, hero, character, known: ctx.known.slice(0, tc.maxKnownEntries), links },
+      ctx.history.map((h) => ({ speaker: h.speaker, text: h.text })),
+      req.message,
+    );
+    const res = await runChecked(
+      userId, req.campaignId, 'game_master', 'Game Master',
+      { schemaName: 'game_master_talk', messages, temperature: 0.8, fixtureHint: { talk: { character, links } } },
+      talkReplySchema,
+      (data) => {
+        const checked = checkTalk(data, links);
+        return checked ? { body: { reply: checked } } : { reason: 'talk: no_line_survived' };
+      },
+    );
+    if (res.status !== 200) return res;
+    const { reply, origin, usage: used } = res.body as { reply: { lines: string[]; suggestions: string[] }; origin: 'ai' | 'fixture'; usage: unknown };
+    await store.call('ai_save_talk', {
+      p_user_id: userId, p_campaign_id: req.campaignId, p_character_id: character.id,
+      p_exchange: { message: req.message, reply: reply.lines.join('\n\n'), origin, suggestions: reply.suggestions }, p_keep: tc.keepMessages,
+    });
+    return { status: 200, body: { reply, origin, nextLesson: ctx.nextLesson, usage: used } };
+  }
+
+  /**
    * The Game Master tells a quest's story once; it is saved, so reading it again costs nothing. The
    * quest itself (steps, XP, completion) is the engine's and is not changed by the story.
    */
@@ -474,6 +532,7 @@ export function createAiService(store: LearningStore, provider: AiProvider | nul
       if (req.data.action === 'write_project') return await subjects.writeProject(userId, req.data.templateId);
       if (req.data.action === 'deepen_lesson') return await subjects.deepen(userId, req.data.templateId, req.data.lessonKey);
       if (req.data.action === 'narrate_scene') return await narrateScene(userId, req.data);
+      if (req.data.action === 'talk') return await talk(userId, req.data);
       if (req.data.action === 'plan_boss') return await planBoss(userId, req.data);
       if (req.data.action === 'narrate_quest') return await narrateQuest(userId, req.data);
       return await askTutor(userId, req.data);
