@@ -39,6 +39,23 @@ Run all automated tests: `npm test`
 
 ## Current results
 
+### 2026-11-28 — Phase 5 Part C3 (talk with characters)
+Automated: **338 tests, 338 passing**; typecheck and production build clean.
+
+New unit tests (`src/services/ai/roles/talk.test.ts`): which characters each course has; claimed
+outcomes and unoffered places are removed; the AI gets only unlocked Codex entries as facts and the
+player's words can't open a fake `<known>` block.
+
+New database tests (`supabase/tests/talk.test.ts`): a labelled fixture exchange is saved and changes
+no XP; the AI sees Codex entries only after the lesson that unlocks them, plus the earlier
+messages; unknown characters are refused and each character has its own conversation; a reply that
+claims an outcome saves nothing; only the last 20 messages are kept; players read and clear only
+their own and cannot write messages or call the server functions.
+
+Live (2026-11-28): migration applied, `ai` function deployed. The Talk page lists the three
+Mesopotamia characters; one message to the Scribe got a real AI reply in character, with a
+"Next lesson" button; clearing the conversation removed it from the database.
+
 ### 2026-11-23 — Phase 5 Part C2 (practical projects)
 Automated: **329 tests, 329 passing**; typecheck and production build clean.
 

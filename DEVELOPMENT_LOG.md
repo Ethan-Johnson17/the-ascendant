@@ -1,5 +1,31 @@
 # Development Log
 
+## 2026-11-28 — Phase 5 Part C3: talk with characters (Phase 5 complete)
+
+**Product owner decisions (2026-11-28):** the Guide plus two people of the time for Mesopotamia
+(AI courses: the Guide only); facts only from the player's unlocked Codex entries; conversations
+saved, last 20 messages per character.
+
+**Built:**
+- content: `src/content/characters.ts` (the Guide, the Scribe of Uruk, the Merchant of Ur);
+- AI: `src/services/ai/roles/talk.ts` (prompt, reply format, `checkTalk`, labelled fixture);
+  action `talk` in `src/services/ai/aiService.ts`; `aiClient.talk`;
+- database: migration `20261128000100_talk.sql`;
+- screen: `src/pages/TalkPage.tsx` (route `/campaigns/:id/talk`), a "Talk" button on the campaign page.
+
+**Choices (mine, within the design):**
+- *Suggestions are the game's places only* (next lesson, quests, Codex), shown as buttons.
+- *The greeting is the game's own line,* so opening a conversation costs nothing.
+- *Characters are content, not tables,* like the other authored material.
+
+**Live test (2026-11-28):** one message to the Scribe with the real AI: an in-character answer and a
+"Next lesson" suggestion; then cleared through the page. The answer added an unsupported reason
+(clay tablets "survive the floods"), so I tightened the rule: reasons and explanations count as
+facts and must come from the Codex too. Not re-tested live after that change.
+
+**Known limitations:** the "facts only from the Codex" rule is an instruction to the AI, not
+something the game can check line by line. Bosses and projects still haven't been played live.
+
 ## 2026-11-23 — Phase 5 Part C2: practical projects
 
 **Product owner decisions (2026-11-23):** a passed project counts as one of the two Advanced passes

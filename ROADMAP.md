@@ -180,7 +180,7 @@ same rules, clearly labelled; building counts against the 30-a-day allowance. Bu
 | C2 | "Start a new subject": AI outline, then lessons and checks built one at a time from fetched source text; "AI-generated" labels; report-a-mistake. Decided 2026-11-16: 4 lessons, harmful topics refused (advice topics labelled), reports flag the lesson, 3 AI subjects per player | Completed; tested offline and live with Groq (2026-11-16). Lessons can't be rebuilt yet |
 | C3 | Game Master and Strategist reply formats, checks and fixtures (used in Phase 5). Decided 2026-11-16: groundwork only, nothing new on screen until Phase 5; bosses use only the course's already-checked questions | Completed; tested offline and live with Groq (2026-11-16) |
 
-## Phase 5 — Campaigns, quests, and encounters — *In progress (decisions made 2026-11-16)*
+## Phase 5 — Campaigns, quests, and encounters — *Completed (2026-11-28); live play of bosses and projects still to do*
 Decided 2026-11-16: quests from game templates with AI story; a boss at each stage (Apprentice,
 Competent, Proficient), each unlocking the next stage's checks; Resolve points (3, Dwarves 4); retry
 after a recovery quest. Built in
@@ -193,7 +193,7 @@ three parts:
 | B2 | Race traits and class abilities in boss battles. Decided 2026-11-17: hint removes a wrong option; Adaptable swaps the question; Scout Ahead shows the next round's ideas; Arcane Recall opens the current question's Codex entry | Completed; tested offline; deployed; not yet used in a live battle |
 | C1 | "Go deeper" for AI-made courses: harder checks for each lesson, one stage at a time (Competent where missing, then Proficient, then Advanced written-only), written from the lesson's own text, built when the player can take them. Decided 2026-11-17 (to be reviewed again later, see below) | Completed; tested offline; deployed; live check of the "not ready" path only (2026-11-17) |
 | C2 | Practical projects: one written task per topic, marked by the Examiner (AI) against a rubric; counts once as an Advanced pass; 75 XP once; opens at Proficient. Mesopotamia has 3 (authored); AI-made courses get 1, written by the Course Builder. Decided 2026-11-17 and 2026-11-23 | Completed; tested offline; deployed; live check of the locked and "not ready" paths only (2026-11-23) |
-| C3 | Free talk with characters (the Game Master): story only, never XP or progress; 1 AI request per message; may point to lessons and quests. Decided 2026-11-17 | Not started |
+| C3 | Free talk with characters (the Game Master): story only, never XP or progress; 1 AI request per message; may point to the next lesson, quests and the Codex. Decided 2026-11-17 and 2026-11-28: the Guide in every course plus two authored people of the time in Mesopotamia; facts only from unlocked Codex entries; last 20 messages per character saved | Completed; tested offline; deployed; one live message with the real AI (2026-11-28) |
 
 **Bookmarked for review (product owner, 2026-11-17):** "go deeper" starts as harder checks on the
 same lessons. Revisit later whether AI courses should also get new, deeper lessons from further

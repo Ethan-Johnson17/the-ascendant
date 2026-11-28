@@ -176,6 +176,18 @@ rewards, winning or losing, "the answer is"), lines from unknown characters and 
 no narration is left, or an offered action has no label, nothing is shown. Choices always appear in
 the game's order. The Game Master changes nothing and nothing is saved.
 
+### Talk with characters (Phase 5 Part C3)
+Action `talk` {campaignId, characterId, message (300 characters)}. Characters come from content
+(`src/content/characters.ts`): the Guide everywhere, plus authored people in Mesopotamia. The
+Game Master (`src/services/ai/roles/talk.ts`) gets the character's persona inside `<character>`,
+the unlocked Codex entries (title and summary, up to 40) inside `<known>` as the only facts it may
+state, the places it may suggest inside `<links>` (next lesson, quests, Codex), the last 6 messages,
+and the player's message inside `<player>`. `checkTalk` removes lines that claim a game outcome and
+any suggestion the game didn't offer; if no line survives, nothing is saved. Each message is
+1 request (role `game_master`); the exchange is saved by `ai_save_talk` (last 20 per character).
+The fixture provider has a labelled stand-in. Limit: whether a line stays inside `<known>` can't be
+checked automatically; the prompt forbids extra facts and reasons, and the page points to lessons.
+
 ### Quest stories (Phase 5 Part A)
 Action `narrate_quest`. On the Quests screen, "Hear the Guide's story" asks the Game Master to
 introduce one quest. The scene is built from the engine's quest (title, summary, steps) with two

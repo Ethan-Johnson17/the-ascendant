@@ -25,6 +25,8 @@ export interface AiConfig {
   };
   /** The Game Master's scenes (groundwork for quests in Phase 5). */
   readonly gameMaster: { readonly maxMessageChars: number; readonly maxHistoryTurns: number };
+  /** Talk with characters: message length, messages sent back for context, messages kept per character. */
+  readonly talk: { readonly maxMessageChars: number; readonly historyMessages: number; readonly keepMessages: number; readonly maxKnownEntries: number };
   readonly tutor: {
     readonly maxQuestionChars: number;
     /** Earlier question/answer pairs sent back for context. */
@@ -44,6 +46,7 @@ export const defaultAiConfig: AiConfig = {
   // Groq's free plan allows 8,000 tokens a minute in total, so a lesson request stays well under it.
   courseBuilder: { maxOpenSubjects: 3, articleChars: 9000, outlineTokens: 2500, lessonTokens: 3500, checkTokens: 2500, projectTokens: 2000 },
   gameMaster: { maxMessageChars: 300, maxHistoryTurns: 2 },
+  talk: { maxMessageChars: 300, historyMessages: 6, keepMessages: 20, maxKnownEntries: 40 },
   tutor: { maxQuestionChars: 500, maxHistoryTurns: 3, maxHistoryChars: 1500 },
 };
 

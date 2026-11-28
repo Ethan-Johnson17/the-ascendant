@@ -520,6 +520,19 @@ The AI must not independently award victories or alter character statistics.
     it counts as evidence for Advanced and gives a one-time XP reward.
   - C3 free talk with characters (the Game Master): story only. It never gives XP or changes
     progress; each message uses 1 daily AI request; characters may point to lessons and quests.
+- **Talk with characters (decided 2026-11-28):** every course has **the Guide**; Mesopotamia also
+  has **the Scribe of Uruk** and **the Merchant of Ur**, written by the development team from the
+  course's lessons (*for product-owner review*). AI-made courses have the Guide only, so the AI
+  never invents historical people. Characters may state facts **only from Codex entries the player
+  has unlocked**, and point elsewhere (lessons, the Tutor) for anything else. Each conversation is
+  **saved, last 20 messages per character**, and the player can clear it.
+- **How C3 works (built 2026-11-28):**
+  - A "Talk" button on the campaign page opens the characters. Each message uses 1 daily AI request.
+  - Story only: talking never gives XP or changes any progress, and lines that claim results
+    (XP, mastery, winning) are removed. If nothing is left, nothing is saved.
+  - A character may suggest the next lesson, the quests or the Codex; these appear as buttons.
+  - The AI is told that reasons and explanations count as facts too. It can still slip (see the
+    development log), so the page says to check lessons for the full, sourced account.
 - **Practical projects (decided 2026-11-23):** a passed project counts as **one** of the two passes
   needed for Advanced, once per skill; the other pass must come from an Advanced check. A project
   opens when every skill it covers is **Proficient**. For AI-made courses the Course Builder (AI)

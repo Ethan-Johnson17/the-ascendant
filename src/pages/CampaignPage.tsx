@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BookOpen, Check, ChevronRight, ClipboardCheck, Clock, Hammer, Library, Lock, RotateCcw, ScrollText, Target } from 'lucide-react';
+import { BookOpen, Check, ChevronRight, ClipboardCheck, Clock, Hammer, Library, Lock, MessageCircle, RotateCcw, ScrollText, Target } from 'lucide-react';
 import { useAuth } from '../app/AuthProvider.tsx';
 import { useGame } from '../app/GameProvider.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
@@ -49,6 +49,7 @@ export default function CampaignPage() {
               <>
                 <ButtonLink to={`/campaigns/${campaign!.id}/quests`} variant="secondary" icon={<ScrollText className="size-4" aria-hidden />}>Quests</ButtonLink>
                 <ButtonLink to={`/codex?campaign=${campaign!.id}`} variant="secondary" icon={<Library className="size-4" aria-hidden />}>Codex</ButtonLink>
+                {!isSample && <ButtonLink to={`/campaigns/${campaign!.id}/talk`} variant="secondary" icon={<MessageCircle className="size-4" aria-hidden />}>Talk</ButtonLink>}
                 <ButtonLink to={`/weaknesses?campaign=${campaign!.id}`} variant="secondary" icon={<Target className="size-4" aria-hidden />}>
                   Weakness Bank{data.weaknesses.filter((w) => w.status === 'open').length ? ` (${data.weaknesses.filter((w) => w.status === 'open').length})` : ''}
                 </ButtonLink>
